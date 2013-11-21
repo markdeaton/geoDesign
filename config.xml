@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<services>
+		<basemaps>
+			<basemap label="Imagery" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"/>
+			<basemap label="Topographic" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer"/>
+			<basemap label="Streets" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer"/>
+			<basemap label="Nat'l Geo" url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/>
+		</basemaps>
+		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS_TIFF/ImageServer"/>
+<!-- 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS/ImageServer"/> -->
+<!-- 		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/GeodesignDemo_UC2013/FeatureServer/0"/> -->
+		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/USFS/FeatureServer/0"/>
+		<geometrySvc url="http://utility.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer"/>
+	</services>
+	<initialExtent xmin="-14352000" ymin="3796000" xmax="-11222000" ymax="5692000"/>
+	<labels>
+		<analysisPanelTitle>Site Suitability</analysisPanelTitle>
+		<sketchPanelTitle>Design Sketch Settings</sketchPanelTitle>
+	</labels>
+	
+	<computeHistogramSettings>
+		<rasterFunctionName>WeightedOverlay_7_0_9_histogram_2</rasterFunctionName>
+		<graphSuitabilityInfo>
+			<!-- These must be in order of low to high suitability (i.e. the same order the values will
+					be returned by the ImageService's computeHistogram function) -->
+			<value0 color="0xcccccc" label="No Data" />
+			<!-- Low suitability -->
+			<value1 color="0xe60000" label="Low-"/>
+			<value2 color="0xf25500" label="Low"/>
+			<value3 color="0xfa8e00" label="Low+"/>
+			<value4 color="0xffc300" label="Mid-"/>
+			<!-- Mid suitability -->
+			<value5 color="0xffff00" label="Mid"/>
+			<value6 color="0xc5db00" label="Mid+"/>
+			<value7 color="0x8bb500" label="High-"/>
+			<value8 color="0x569400" label="High"/>
+			<value9 color="0x267300" label="High+"/>
+		</graphSuitabilityInfo>
+	</computeHistogramSettings>
+
+	<!-- Reclass type string should be "range" or "discrete" (as defined in OverlayReclass RECLASS_TYPENAME constants) -->
+	<analysisSettings>
+		<rasterFunctionName>WeightedOverlay_7_1_9_2</rasterFunctionName>
+		<variable title="Critical Habitat" startWeightPct="0" rasterId="7" rasterIdParamName="Raster1" weightParamName="Weight_Raster1" inputRangesParamName="InputRanges_Raster1" outputValuesParamName="OutputValues_Raster1">
+			<reclass type="discrete" value="0" label="Not critical" reclassValue="1"/> 
+			<reclass type="discrete" value="5" label="Threatened" reclassValue="5"/> 
+			<reclass type="discrete" value="10" label="Endangered" reclassValue="9"/> 
+		</variable>
+		
+ 		<variable title="Development Risk" startWeightPct="0" rasterId="1" rasterIdParamName="Raster2" weightParamName="Weight_Raster2" inputRangesParamName="InputRanges_Raster2" outputValuesParamName="OutputValues_Raster2">
+ 			<reclass type="discrete" value="0" label="None" reclassValue="0"/>
+ 			<reclass type="discrete" value="1" label="Low" reclassValue="5"/>
+ 			<reclass type="discrete" value="2" label="Moderate" reclassValue="5"/>
+ 			<reclass type="discrete" value="3" label="High" reclassValue="9"/>
+ 			<reclass type="discrete" value="4" label="Very high" reclassValue="9"/>
+ 		</variable>
+		
+ 		<variable title="Fire Potential" startWeightPct="0" rasterId="2" rasterIdParamName="Raster3" weightParamName="Weight_Raster3" inputRangesParamName="InputRanges_Raster3" outputValuesParamName="OutputValues_Raster3">
+ 			<reclass type="discrete" value="0" label="None" reclassValue="1"/>
+ 			<reclass type="discrete" value="1" label="Very low" reclassValue="5"/>
+ 			<reclass type="discrete" value="2" label="Low" reclassValue="5"/>
+ 			<reclass type="discrete" value="3" label="Moderate" reclassValue="5"/>
+			<reclass type="discrete" value="4" label="High" reclassValue="9"/>
+ 			<reclass type="discrete" value="5" label="Very high" reclassValue="9"/>
+ 			<reclass type="discrete" value="6" label="None (Non-vegetation)" reclassValue="1"/>
+ 			<reclass type="discrete" value="7" label="None (Agriculture)" reclassValue="1"/>
+ 			<reclass type="discrete" value="8" label="None (Urban/development/ag)" reclassValue="1"/>
+ 			<reclass type="discrete" value="9" label="None (Water)" reclassValue="1"/>
+ 		</variable>
+		
+	 	<variable title="Forest Fragmentation" startWeightPct="0" rasterId="3" rasterIdParamName="Raster4" weightParamName="Weight_Raster4" inputRangesParamName="InputRanges_Raster4" outputValuesParamName="OutputValues_Raster4">
+ 			<reclass type="discrete" value="0" label="None (Water)" reclassValue="1"/>
+ 			<reclass type="discrete" value="1" label="Very low (Edge)" reclassValue="5"/>
+ 			<reclass type="discrete" value="2" label="None (undetermined)" reclassValue="1"/>
+ 			<reclass type="discrete" value="3" label="Low (Perforated)" reclassValue="5"/>
+ 			<reclass type="discrete" value="4" label="None (Interior)" reclassValue="1"/>
+  			<reclass type="discrete" value="5" label="High (Patch)" reclassValue="9"/>
+ 			<reclass type="discrete" value="6" label="Medium (Transitional)" reclassValue="5"/>
+ 			<reclass type="discrete" value="7" label="None (Unlabeled)" reclassValue="1"/>
+		</variable>
+
+	 	<variable title="Insect and Disease Risk" startWeightPct="0" rasterId="4" rasterIdParamName="Raster5" weightParamName="Weight_Raster5" inputRangesParamName="InputRanges_Raster5" outputValuesParamName="OutputValues_Raster5">
+ 			<reclass type="range" startValue="0" endValue="35" startLabel="0 (lowest)" endLabel="34" reclassValue="1"/> 
+ 			<reclass type="range" startValue="35" endValue="66" startLabel="35" endLabel="65" reclassValue="9"/> 
+ 			<reclass type="range" startValue="66" endValue="101" startLabel="66" endLabel="100 (highest)" reclassValue="5"/> 
+ 		</variable>
+
+	 	<variable title="Woody Biomass" startWeightPct="0" rasterId="5" rasterIdParamName="Raster6" weightParamName="Weight_Raster6" inputRangesParamName="InputRanges_Raster6" outputValuesParamName="OutputValues_Raster6">
+ 			<reclass type="range" startValue="0" endValue="66" startLabel="0" endLabel="65" reclassValue="1"/>
+ 			<reclass type="range" startValue="66" endValue="133" startLabel="66" endLabel="132" reclassValue="5"/>
+ 			<reclass type="range" startValue="133" endValue="256" startLabel="133" endLabel="255" reclassValue="9"/>
+ 		</variable>
+
+	 	<variable title="Wildland/Urban Interface" startWeightPct="0" rasterId="6" rasterIdParamName="Raster7" weightParamName="Weight_Raster7" inputRangesParamName="InputRanges_Raster7" outputValuesParamName="OutputValues_Raster7">
+ 			<reclass type="discrete" value="0" label="Non-Interface" reclassValue="1"/>
+ 			<reclass type="discrete" value="1" label="Interface" reclassValue="9"/>
+ 		</variable>
+		
+<!-- 		<variable title="Aspect" startWeightPct="25" rasterId="3" rasterIdParamName="Raster3" weightParamName="Weight_Raster3" inputRangesParamName="InputRanges_Raster3" outputValuesParamName="OutputValues_Raster3"> -->
+<!-- 			<reclass type="range" startValue="-1" endValue="45" startLabel="0°" endLabel="45°" reclassValue="1"/> -->
+<!-- 			<reclass type="range" startValue="45" endValue="90" startLabel="45°" endLabel="90°" reclassValue="3"/> -->
+<!-- 			<reclass type="range" startValue="90" endValue="135" startLabel="90°" endLabel="135°" reclassValue="6"/> -->
+<!-- 			<reclass type="range" startValue="135" endValue="180" startLabel="135°" endLabel="180°" reclassValue="9"/> -->
+<!-- 			<reclass type="range" startValue="180" endValue="225" startLabel="180°" endLabel="225°" reclassValue="9"/> -->
+<!-- 			<reclass type="range" startValue="225" endValue="270" startLabel="225°" endLabel="270°" reclassValue="6"/> -->
+<!-- 			<reclass type="range" startValue="270" endValue="315" startLabel="270°" endLabel="315°" reclassValue="3"/> -->
+<!-- 			<reclass type="range" startValue="315" endValue="360" startLabel="315°" endLabel="360°" reclassValue="1"/> -->
+<!-- 		</variable> -->
+		
+<!-- 		<variable title="Land Cover" startWeightPct="25" rasterId="4" rasterIdParamName="Raster4" weightParamName="Weight_Raster4" inputRangesParamName="InputRanges_Raster4" outputValuesParamName="OutputValues_Raster4"> -->
+<!-- 			<reclass type="discrete" value="11" label="Open Water" reclassValue="1"/>  -->
+<!-- 			<reclass type="discrete" value="12" label="Perennial Snow/Ice" reclassValue="1"/>  -->
+<!-- 			<reclass type="discrete" value="21" label="Developed, Open Space" reclassValue="2"/>  -->
+<!-- 			<reclass type="discrete" value="22" label="Developed, Low Intensity" reclassValue="2"/>  -->
+<!-- 			<reclass type="discrete" value="23" label="Developed, Medium Intensity" reclassValue="2"/>  -->
+<!-- 			<reclass type="discrete" value="24" label="Developed, High Intensity" reclassValue="2"/>  -->
+<!-- 			<reclass type="discrete" value="31" label="Barren Land" reclassValue="9"/>  -->
+<!-- 			<reclass type="discrete" value="41" label="Deciduous Forest" reclassValue="4"/>  -->
+<!-- 			<reclass type="discrete" value="42" label="Evergreen Forest" reclassValue="3"/>  -->
+<!-- 			<reclass type="discrete" value="43" label="Mixed Forest" reclassValue="4"/>  -->
+<!-- 			<reclass type="discrete" value="52" label="Scrub/Shrub" reclassValue="8"/>  -->
+<!-- 			<reclass type="discrete" value="71" label="Herbaceous" reclassValue="7"/>  -->
+<!-- 			<reclass type="discrete" value="81" label="Hay/Pasture" reclassValue="6"/>  -->
+<!-- 			<reclass type="discrete" value="82" label="Cultivated Crops" reclassValue="3"/>  -->
+<!-- 			<reclass type="discrete" value="90" label="Woody Wetlands" reclassValue="4"/>  -->
+<!-- 			<reclass type="discrete" value="95" label="Emergent Herbaceous Wetlands" reclassValue="4"/>  -->
+<!-- 		</variable> -->
+	</analysisSettings>
+</config>

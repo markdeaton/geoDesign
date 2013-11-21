@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+         xmlns:s="library://ns.adobe.com/flex/spark"  
+         height="26"
+		 height.selected="100%" 
+         autoDrawBackground="false" 
+		 xmlns:WeightedOverlayRasterItemSlider="components.WeightedOverlayRasterItemSlider.*">
+    <s:layout>
+		<s:VerticalLayout paddingTop="0" paddingBottom="0" paddingLeft="0" paddingRight="0" gap="0"/>
+	</s:layout>
+	<fx:Metadata>
+		[Event(name="weightChanged", type="flash.events.Event")]
+		[Event(name="reclassItemChanged", type="flash.events.Event")]
+	</fx:Metadata>
+    <fx:Script>
+        <![CDATA[
+            import effects.IntegerInterpolator;
+            
+        ]]>
+    </fx:Script>
+    
+    <fx:Style>
+        @namespace s "library://ns.adobe.com/flex/spark";
+        
+        .headerStyle
+        {
+            fontFamily : "_sans";
+            color : black;
+         	fontSize : 16; 
+        }
+    </fx:Style>
+    
+    <s:states>
+        <s:State name="normal"/>
+        <s:State name="selected"/>                 
+    </s:states>
+    
+    <s:transitions>
+        <s:Transition fromState="*" toState="selected">
+            <s:Parallel>
+                <s:Fade target="{trkVariable}" duration="300"/>
+                <s:Resize target="{this}" duration="300" interpolator="{effects.IntegerInterpolator.getInstance()}"
+                          effectStart="dispatchEvent(new Event('expandEffectStart'));" 
+                          effectEnd="dispatchEvent(new Event('expandEffectEnd'));"/>
+            </s:Parallel>
+            
+        </s:Transition>
+        <s:Transition fromState="selected" toState="*">
+            <s:Parallel>
+                <s:Fade target="{trkVariable}" duration="300"/>
+                <s:Resize target="{this}" duration="300" interpolator="{effects.IntegerInterpolator.getInstance()}"/>
+            </s:Parallel>
+            
+        </s:Transition>
+    </s:transitions>
+    
+	<!-- Header -->
+    <s:Group width="100%" height="26">
+        <s:Rect top="0" bottom="0" left="0" right="0">
+            <s:fill>
+                <s:LinearGradient rotation="90">
+					<s:GradientEntry color="0xFFFFFF"/>
+					<s:GradientEntry color="0xCCCCCC"/>
+				</s:LinearGradient>
+            </s:fill>
+        </s:Rect>
+		<s:Rect top="0" bottom="0" left="0" right="0">
+			<s:stroke>
+				<s:SolidColorStroke color="0x000000"/>
+			</s:stroke>
+		</s:Rect>
+		
+		<s:Label id="labelDisplay" left="10" right="10" verticalCenter="2" 
+				 styleName="headerStyle" text="{(data as OverlayVariableSettings).title} ({(trkVariable.weightPercent == 0) ? '0' : trkVariable.weightPercent.toFixed()}%)"/>
+
+    </s:Group>
+    
+	<!-- Content -->
+	<WeightedOverlayRasterItemSlider:WeightedOverlayRasterItemSlider id="trkVariable" 
+												 visible.normal="false" visible.selected="true"
+												 title="Weight"
+												 weightPercent="{(data as OverlayVariableSettings).startWeightPct}"
+												 itemData="{(data as OverlayVariableSettings).reclassInfos}"/>
+    
+</s:ItemRenderer> 

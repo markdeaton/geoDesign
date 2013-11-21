@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:reclassItem="components.WeightedOverlayRasterItemSlider.*" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" 
+			   xmlns:ns="http://flexponential.com/2011/11/10/accordionlist-with-expanding-item-renderers/" 
+			   xmlns:WeightedOverlaySettings="components.WeightedOverlaySettings.*">
+	<fx:Script>
+		<![CDATA[
+			import com.esri.ags.layers.supportClasses.RasterFunction;
+			
+			import components.WeightedOverlayRasterItemSlider.WeightedOverlayRasterItemSlider;
+			
+			import mx.collections.ArrayCollection;
+			
+			[Bindable(event="rasterFunctionObjectChanged")]
+			public var rasterFunction				: RasterFunction;
+			[Bindable(event="rasterFunctionObjectChanged")]
+			public var analysisLayerShouldBeVisible	: Boolean;
+			[Bindable(event="settingsChanged")]
+			private var _settings					: ArrayCollection;
+			/** The name of the server-side raster function chain we'll use for the weighted overlay analysis **/
+			[Bindable]
+			public var rasterFunctionName			: String;
+			
+			private var _listCreationComplete		: Boolean = false;
+			
+			
+			/** Data provider for weight and reclass slider sets.
+			 *  @param value - Array of ArrayCollections of reclass objects (OverlayReclassRange or OverlayReclassDiscrete)
+			 **/
+			public function set settings(value:ArrayCollection):void
+			{
+				_settings = value;
+				dispatchEvent(new Event("settingsChanged"));
+			}
+
+			/** Extra logic to check that weights sum to 100 **/
+ 			public function validateUpdatedWeights(event:Event):void
+			{
+				// Make sure all weights add up to 100%
+				var bWeightsEqual100:Boolean = weightsEqual100();
+				grpColorLegend.visible = grpColorLegend.includeInLayout = bWeightsEqual100;
+				lblErrMsg.visible = lblErrMsg.includeInLayout = !bWeightsEqual100;
+				lblWeightTotal.text = "Weight total: " + weightsTotal().toString() + "%";
+				if (bWeightsEqual100 || weightsEqualZero()) {
+					analysisLayerShouldBeVisible = true;
+//					rebuildRenderingRuleJSON(event);				
+					rebuildRasterFunctionObject(event);
+				}
+				else {
+					analysisLayerShouldBeVisible = false;
+					dispatchEvent(new Event("rasterFunctionObjectChanged"));
+				}
+			}
+			
+			private function weightsEqual100():Boolean {
+				return weightsTotal() == 100;
+			}
+			private function weightsEqualZero():Boolean {
+				return weightsTotal() == 0;
+			}
+			private function weightsTotal():uint {
+				var nTotal:uint = 0;
+				for (var nChild:uint = 0; nChild < lstAnalysisSettings.dataGroup.numChildren; nChild++) {
+					var oRend:AccordionVariableRenderer = lstAnalysisSettings.dataGroup.getChildAt(nChild) as AccordionVariableRenderer;
+					nTotal += oRend.trkVariable.weightPercent;
+				}
+
+				return nTotal;
+			} 
+			
+ 			public function rebuildRasterFunctionObject(event:Event):void
+			{
+				var rf:RasterFunction = new RasterFunction();
+				rf.functionName = rasterFunctionName;
+				
+				var params:Object = {};
+				
+				for (var nRaster:int = 0; nRaster < lstAnalysisSettings.dataGroup.numChildren; nRaster++) {
+					var oRend:AccordionVariableRenderer = lstAnalysisSettings.dataGroup.getChildAt(nRaster) as AccordionVariableRenderer;
+					var analysisVar:OverlayVariableSettings = oRend.data as OverlayVariableSettings;
+					var trkVariable:WeightedOverlayRasterItemSlider = oRend.trkVariable;
+					
+					params[ analysisVar.rasterIdParamName ] = "$" + analysisVar.rasterId;
+					params[ analysisVar.weightParamName ] = (weightsEqual100()) ? (trkVariable.weightPercent / 100) : 0;
+					if (trkVariable.weightPercent > 0.0) {
+						params[ analysisVar.inputRangesParamName ] = trkVariable.inputRanges;
+						params[ analysisVar.outputValuesParamName ]  = trkVariable.outputValues;
+					}
+				}
+				
+				rf.arguments = params;
+				rasterFunction = rf;
+				dispatchEvent(new Event("rasterFunctionObjectChanged"));
+			} 
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+
+	<s:layout>
+		<s:VerticalLayout paddingTop="5" paddingBottom="5" paddingLeft="5" paddingRight="5"/>
+	</s:layout>
+	
+	<s:HGroup width="100%">
+		<s:HGroup gap="8" verticalAlign="middle">
+			<s:Label id="lblWeightTotal" text="Weight Total: 0%" fontSize="16" fontWeight="bold" visible="true"/>
+			<s:Label id="lblErrMsg" text="(must total 100%)" 
+					 visible="true" includeInLayout="true"
+					 fontSize="14" fontStyle="normal" fontWeight="normal" color="red"/>
+			<s:Group id="grpColorLegend" width="150" 
+					 visible="false" includeInLayout="false">
+				<s:Rect left="0" right="0" top="0" bottom="0">
+					<s:stroke>
+						<s:SolidColorStroke color="0x909090" weight="1"/>
+					</s:stroke>
+					<s:fill>
+						<s:LinearGradient>
+							<s:GradientEntry color="0xFF0000" ratio="0.0"/>
+							<s:GradientEntry color="0xFFFF00" ratio="0.5"/>
+							<s:GradientEntry color="0x009900" ratio="1.0"/>
+						</s:LinearGradient>
+					</s:fill>
+				</s:Rect>
+				<s:HGroup left="5" right="5" top="5" bottom="3" verticalAlign="middle">
+					<s:Label text="Low" textAlign="left"/>
+					<s:Label text="Med" width="100%" textAlign="center"/>
+					<s:Label text="High" textAlign="right"/>
+				</s:HGroup>
+			</s:Group>
+		</s:HGroup>
+	</s:HGroup>
+
+	<ns:AccordionList id="lstAnalysisSettings" width="100%" height="100%" dataProvider="{_settings}">
+		<ns:creationComplete>
+			<![CDATA[
+				_listCreationComplete = true;
+				(event.currentTarget as AccordionList).selectedIndex = 0;
+			]]>
+		</ns:creationComplete>
+		<ns:itemRenderer>
+			<fx:Component>
+				<WeightedOverlaySettings:AccordionVariableRenderer 
+					weightChanged="outerDocument.validateUpdatedWeights(event);"
+					reclassItemChanged="outerDocument.rebuildRasterFunctionObject(event);"/>
+			</fx:Component>
+		</ns:itemRenderer>
+	</ns:AccordionList>
+	
+	
+</s:TitleWindow>

@@ -1,0 +1,556 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   xmlns:esri="http://www.esri.com/2008/ags"
+			   remove="sketchWindow_removeHandler(event)" add="sketchWindow_addHandler(event)"
+			   creationComplete="sketchWindow_creationCompleteHandler(event)"
+			   currentState="overview">
+	<s:states>
+		<s:State name="overview"/>
+		<s:State name="detail"/>
+	</s:states>
+	<s:layout>
+		<s:VerticalLayout paddingTop="5" paddingLeft="5" paddingRight="5" paddingBottom="5" gap="8"/>
+	</s:layout>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<esri:Query id="qryAllFeatures" where="1=1" returnGeometry="true" returnM="false" returnZ="false"/>
+		<esri:AreasAndLengthsParameters id="areaCalcParams" areaUnit="{AREA_UNITS}" calculationType="{CalculationType.PRESERVE_SHAPE}"/>
+		<fx:String id="computeHistogramUrl"/>
+		<fx:XMLList id="suitabilityCategories"/>
+		
+		<s:HTTPService id="htsComputeHistogram" url="{computeHistogramUrl}" method="POST"
+					   result="onComputeHistogramResult(event)"
+					   fault="onComputeHistogramFault(event)"
+					   resultFormat="text"/>
+		<s:NumberFormatter id="fmtAreaValues" useGrouping="true" fractionalDigits="2"/>
+</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.esri.ags.FeatureSet;
+			import com.esri.ags.Graphic;
+			import com.esri.ags.Map;
+			import com.esri.ags.SpatialReference;
+			import com.esri.ags.components.TemplatePicker;
+			import com.esri.ags.components.supportClasses.Template;
+			import com.esri.ags.events.DrawEvent;
+			import com.esri.ags.events.FeatureLayerEvent;
+			import com.esri.ags.events.TemplatePickerEvent;
+			import com.esri.ags.geometry.Polygon;
+			import com.esri.ags.layers.FeatureLayer;
+			import com.esri.ags.layers.supportClasses.RasterFunction;
+			import com.esri.ags.symbols.SimpleFillSymbol;
+			import com.esri.ags.tasks.GeometryService;
+			import com.esri.ags.tasks.supportClasses.AreasAndLengthsResult;
+			import com.esri.ags.tasks.supportClasses.CalculationType;
+			import com.esri.ags.tools.DrawTool;
+			import com.esri.ags.utils.JSONUtil;
+			
+			import components.alert.Alert;
+			import components.charting.SketchClassAreaInfo;
+			import components.charting.SketchSuitabilityInfo;
+			
+			import mx.charts.ChartItem;
+			import mx.charts.HitData;
+			import mx.charts.chartClasses.Series;
+			import mx.charts.events.ChartItemEvent;
+			import mx.charts.series.items.PieSeriesItem;
+			import mx.events.FlexEvent;
+			import mx.graphics.IFill;
+			import mx.graphics.SolidColor;
+			import mx.rpc.AsyncResponder;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.Fault;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			private const AREA_UNITS			: String = GeometryService.UNIT_SQUARE_MILES;
+			private const AREA_CHART_LABEL		: String = "sq mi";
+			
+			private const AREA_ATTR_NAME		: String = "Area";
+			
+			private var _map					: Map;
+			private var _sketchFeatureLayer		: FeatureLayer;
+			private var _geomService			: GeometryService;
+			
+			[Bindable]
+			private var _selectedChartSketchClass		: SketchClassAreaInfo;
+			private var _fillSymbolForSketchInProgress	: SimpleFillSymbol;
+			
+			private var _rfAnalysisSettings				: RasterFunction;
+			
+			/** Data provider for the dashboard charts **/
+			[Bindable(event="chartDataChanged")]
+			private var chartData				: Array;
+			/** Data provider for sketch result stats **/
+			[Bindable(event="histogramDataChanged")]
+			private var suitabilityClassData			: Array;
+			/** Colors for the chart categories, taken from the feature service editing templates **/
+			[Bindable(event="chartDataChanged")]
+			private var chartFills				: Array;
+			/** Total sketched area, for label **/
+			[Bindable]
+			private var nTotalSketchArea		: Number;
+			
+			public function set rfAnalysisSettings(value:RasterFunction):void
+			{
+				_rfAnalysisSettings = value;
+				if (currentState == "detail")
+					computeHistogram();
+			}
+
+			[Bindable]
+			public function get geomService():GeometryService
+			{
+				return _geomService;
+			}
+
+			public function set geomService(value:GeometryService):void
+			{
+				_geomService = value;
+			}
+
+			[Bindable]
+			/** The feature layer to hold geodesign sketch polygons. **/
+			public function get sketchFeatureLayer():FeatureLayer
+			{
+				return _sketchFeatureLayer;
+			}
+
+			public function set sketchFeatureLayer(value:FeatureLayer):void
+			{
+//				if (value == null) Alert.show("Sketch feature layer invalid.");
+				_sketchFeatureLayer = value;
+			}
+
+			[Bindable]
+			/** The map object holding the sketch layer to be edited. **/
+			public function get map():Map
+			{
+				return _map;
+			}
+
+			public function set map(value:Map):void
+			{
+				_map = value;
+			}
+
+			private function defaultPolygonDrawTool(bFreehand:Boolean):String {
+				return (bFreehand) ? DrawTool.FREEHAND_POLYGON : DrawTool.POLYGON;
+			}
+			
+			protected function sketchWindow_removeHandler(event:FlexEvent):void
+			{
+				editor.templatePicker.clearSelection();
+				sketchFeatureLayer.removeEventListener(FeatureLayerEvent.EDITS_COMPLETE, sketchLayer_editsComplete);
+			}
+			
+			protected function sketchWindow_addHandler(event:FlexEvent):void
+			{
+				sketchFeatureLayer.addEventListener(FeatureLayerEvent.EDITS_COMPLETE, sketchLayer_editsComplete);
+				// Don't wait for a feature edit to update the dashboard when the window is first opened
+				updateDashboardStats(sketchFeatureLayer);
+			}
+			
+			/** Whenever any kind of edit is done, query for the features and update statistics dashboard with the results **/
+			protected function sketchLayer_editsComplete(event:FeatureLayerEvent):void {
+				updateDashboardStats(event.featureLayer);
+				if (_selectedChartSketchClass && chartData) 
+					computeHistogram();
+				else
+					currentState = "overview";
+			}
+			
+			/** Calls on the geometry service to get feature area info; then assembles the data and updates the charts **/
+			protected function updateDashboardStats(lyrFeatures:FeatureLayer):void {
+				lyrFeatures.queryFeatures(qryAllFeatures, new AsyncResponder(
+					function(allFeatures:FeatureSet, token:Object = null):void {
+						// Query for areas; then merge the results into the features and send to another
+						// function to summarize and update the dashboard
+						if (allFeatures.features.length > 0) {
+							var polygons:Array = allFeatures.features.map(function(g:Graphic, i:int, a:Array):Polygon {
+								return g.geometry as Polygon;
+							});
+							areaCalcParams.polygons = polygons;
+							geomService.areasAndLengths(areaCalcParams, new AsyncResponder(
+								function(allAreas:AreasAndLengthsResult, token:Object=null):void {
+									/// Assumption: result areas array is in same order as original polygons array sent in
+									for (var i:int = 0; i < allAreas.areas.length; i++) {
+										(allFeatures.features[i] as Graphic).attributes[AREA_ATTR_NAME] = allAreas.areas[i];
+									}
+									applyUpdatedStatsToCharts(allFeatures, editor);
+								},
+								function(fault:Fault, token:Object=null):void {
+									Alert.show(this, "Data Retrieval Error", "Error getting polygon areas: " + fault.message, true);
+								},
+								null));
+						}
+						else { // No features came back from the query; hide the charts
+							trace("Zero features found in sketch layer");
+							clearChartData();
+						}
+					},
+					function(fault:Fault, token:Object = null):void {
+						Alert.show(this, "Data Retrieval Error", "Error querying features in feature layer: " + fault.message, true); 
+					},
+					null
+				));
+			}
+			
+			/** Update dashboard controls to show stats on latest features in this feature layer. **/
+			private function applyUpdatedStatsToCharts(fs:FeatureSet, ed:Editor):void {
+				var aryClasses:Array = new Array();
+				var iCategoryValue:int;
+				var sSubtypeAttributeName:String = ed.templatePicker.templateCollection[0].featureLayer.layerDetails.typeIdField;
+				var templates:Array = ed.templatePicker.templateCollection[0].templates;
+				
+				// Set up array without area data
+				for (var i:int = 0; i < templates.length; i++) {
+					var template:Template = templates[i];
+					iCategoryValue = template.featureTemplate.prototype.attributes[sSubtypeAttributeName];
+					var sLabel:String = template.featureTemplate.name;
+					var nColor:uint = SimpleFillSymbol(template.symbol).color;
+					
+					aryClasses.push(new SketchClassAreaInfo( iCategoryValue, sLabel, nColor ));
+				}
+				// Iterate through feature set, summing area data values
+				nTotalSketchArea = 0;
+				for each (var g:Graphic in fs.features) {
+					var nArea:Number = g.attributes[AREA_ATTR_NAME];
+					nTotalSketchArea += nArea;
+					iCategoryValue = g.attributes[sSubtypeAttributeName];
+					// Find the right class object to update
+					for each (var oClass:SketchClassAreaInfo in aryClasses) {
+						if (oClass.categoryValue == iCategoryValue) {
+							oClass.area += nArea;
+							// Also add this feature to the polygonChartClass
+							oClass.features.push( g );
+							break;
+						}
+					}
+				}
+				chartFills = sketchClassFills(aryClasses);
+				chartData = aryClasses;
+				dispatchEvent(new Event("chartDataChanged"));
+			}
+			
+			/** Extracts an array of solid color fills for the legend classes.
+			 *  @param aryClasses an array of PolygonChartClass objects
+			 *  @return an array of SolidColor objects
+			 **/
+			private function sketchClassFills(aryClasses:Array):Array {
+				var fills:Array = aryClasses.map(function(o:SketchClassAreaInfo, i:int, a:Array):SolidColor {
+					return new SolidColor(o.color);
+				});
+				return fills;
+			}
+			
+			/** Takes an array of SketchSuitabilityInfo objects; extracts the colors into an array of SolidColor objects. **/
+/* 			private function suitabilityClassFills(arySuitabilityInfos:Array):Array {
+				var aryResult:Array = arySuitabilityInfos.map(function(o:SketchSuitabilityInfo, i:int, a:Array):SolidColor {
+					return new SolidColor(o.sketchClassColor);
+				});
+				return aryResult; 
+			}*/
+			
+			private function suitabilityFill(item:ChartItem, index:Number):IFill {
+				var oSuitabilityInfo:SketchSuitabilityInfo = SketchSuitabilityInfo(item.item);
+				return new SolidColor(oSuitabilityInfo.sketchClassColor);
+			}
+			
+			private function sketchClassPieWedgeDataTips(hitData:HitData):String {
+				var data:SketchClassAreaInfo = hitData.item as SketchClassAreaInfo;
+ 				var val:Number = data.area;
+				var sVal:String = fmtAreaValues.format(val);
+				var sPct:String = (hitData.chartItem as PieSeriesItem).percentValue.toFixed(1);
+				var sLabel:String = "<b>" + data.label + ": " + sPct + "%" + "</b><br/>" + "(" + sVal + " " + AREA_CHART_LABEL + ")";
+				return sLabel; 
+			}
+			
+			private function sketchClassColumnDataTips(hitData:HitData):String {
+				var data:SketchClassAreaInfo = hitData.item as SketchClassAreaInfo;
+				var val:Number = data.area;
+				var sVal:String = fmtAreaValues.format(val);
+//				var sPct:String = (hitData.chartItem as ColumnSeriesItem).percentValue.toFixed(1);
+				var sLabel:String = "<b>" + data.label + "</b>" + " (" + sVal + " " + AREA_CHART_LABEL + ")";
+				return sLabel; 
+			}
+
+			private function sketchSuitabilityPieWedgeDataTips(hitData:HitData):String {
+				var data:SketchSuitabilityInfo = hitData.item as SketchSuitabilityInfo;
+ 				var val:Number = data.area;
+				var sVal:String = fmtAreaValues.format(val);
+				var sPct:String = (hitData.chartItem as PieSeriesItem).percentValue.toFixed(1);
+				var sLabel:String = "<b>" + data.label + ": " + sPct + "%" + "</b><br/>" + "(" + sVal + " " + AREA_CHART_LABEL + ")";
+				return sLabel; 
+			}
+			
+			private function sketchSuitabilityColumnDataTips(hitData:HitData):String {
+				var data:SketchSuitabilityInfo = hitData.item as SketchSuitabilityInfo;
+				var val:Number = data.area;
+				var sVal:String = fmtAreaValues.format(val);
+//				var sPct:String = (hitData.chartItem as ColumnSeriesItem).percentValue.toFixed(1);
+				var sLabel:String = "<b>" + data.label + "</b>" + " (" + sVal + " " + AREA_CHART_LABEL + ")";
+				return sLabel; 
+			}
+			
+			private function labelAreaColumns(element:ChartItem, series:Series):String { 
+				return (element.item as SketchClassAreaInfo).area.toFixed(2);
+			}
+
+			private function clearChartData():void {
+				chartData = chartFills = null;
+				dispatchEvent(new Event("chartDataChanged"));
+			}
+			
+			protected function sketchLayer_sketchStarted(event:DrawEvent):void {
+				_fillSymbolForSketchInProgress = editor.templatePicker.selectedTemplate.symbol.clone() as SimpleFillSymbol;
+				// event.graphic == null?
+				(editor.drawTool.fillSymbol as SimpleFillSymbol).alpha = 0.6;
+				(editor.drawTool.fillSymbol as SimpleFillSymbol).outline.width = 2;
+			}
+			
+			protected function sketchLayer_sketchEnded(event:DrawEvent):void {
+				(event.graphic.symbol as SimpleFillSymbol).outline.width = _fillSymbolForSketchInProgress.outline.width;
+				(event.graphic.symbol as SimpleFillSymbol).alpha = _fillSymbolForSketchInProgress.alpha;
+			}
+			
+			protected function sketchLayer_templateSelected(event:TemplatePickerEvent):void {
+				var fl:FeatureLayer = (event.currentTarget as TemplatePicker).featureLayers[0];
+				// Refresh the sketch layer to bring in any new data from other users
+				fl.refresh();
+				// Update charting components as well
+				updateDashboardStats(fl);
+			}
+			
+			protected function sketchWindow_creationCompleteHandler(event:FlexEvent):void
+			{
+				editor.drawTool.addEventListener(DrawEvent.DRAW_START, sketchLayer_sketchStarted);
+				editor.drawTool.addEventListener(DrawEvent.DRAW_END, sketchLayer_sketchEnded);
+				editor.templatePicker.addEventListener(TemplatePickerEvent.SELECTED_TEMPLATE_CHANGE, sketchLayer_templateSelected);
+			}
+			
+			protected function onChartSketchClassClick(event:ChartItemEvent):void
+			{
+				trace("onSketchClassClick");
+				
+				// Query for histogram for this data class; show sketch class stats charts
+				var oClass:SketchClassAreaInfo = event.hitData.item as SketchClassAreaInfo;
+				_selectedChartSketchClass = oClass;
+				
+				// Ask the server for a histogram of the areas covered by the desired sketch;
+				// They may have clicked a column-chart item that doesn't have a data item, 
+				// so don't compute a histogram for an empty chart item
+				if (_selectedChartSketchClass.features.length > 0) {
+					computeHistogram();
+					currentState = "detail";
+				}
+				else currentState = "overview";
+			}
+			
+			private function computeHistogram():void {
+				trace("calcHistogram");
+				
+				// Convert set of sketches to a single multi-ring polygon
+				var sr:SpatialReference = (_selectedChartSketchClass.features[0] as Graphic).geometry.spatialReference;
+				var pgnSketches:Polygon = new Polygon([], sr);
+				for each (var gpcSketch:Graphic in _selectedChartSketchClass.features) {
+					for each (var aryRing:Array in (gpcSketch.geometry as Polygon).rings) {
+						pgnSketches.addRing(aryRing);
+					}
+				}
+				// Bundle up the params and submit
+				var oParams:Object = {
+					"f"					: "json",
+					"geometryType"		: "esriGeometryPolygon",
+					"geometry"			: JSONUtil.encode(pgnSketches),
+					"renderingRule"		: JSONUtil.encode(_rfAnalysisSettings)
+				};
+				
+				var at:AsyncToken = htsComputeHistogram.send(oParams);
+				at.area = _selectedChartSketchClass.area;
+			}
+			
+			protected function onComputeHistogramResult(event:ResultEvent):void
+			{
+				trace("computeHistogram complete");
+				// The function doesn't necessarily create a full 10-item array if the ending values are zeros
+				// Build a full array of info objects, filling with zeros where not specified by the results
+				var sResult:String = String(event.result);
+				var oResult:Object = JSONUtil.decode(sResult);
+				
+				var nTotalArea:Number = event.token.area;
+				var nTotalPixels:uint = 0;
+				
+				/** Array of results from computeHistogram function **/
+				var aryHistoResult:Array = oResult.histograms[0].counts as Array;
+				for each (var count:uint in aryHistoResult) {
+					nTotalPixels += count;
+				}
+
+				var nAreaPerPixel:Number = nTotalArea / nTotalPixels;
+				
+
+				/** Array of SketchSuitabilityInfo records we build from config and from computeHistogram results **/
+				var arySketchSuitabilityInfos:Array = [];
+				
+				if ( !aryHistoResult ) aryHistoResult = [];
+				else {
+					for (var i:int = 0; i < suitabilityCategories.length(); i++) {
+						var xmlSuitabilityItem:XML = suitabilityCategories[ i ]; //.elements( "value" + i.toString() );
+						var nPixelCountForSuitabilityCategory:uint = i < aryHistoResult.length ? aryHistoResult[ i ] : 0
+						var oSuitabilityInfo:SketchSuitabilityInfo = new SketchSuitabilityInfo(
+							xmlSuitabilityItem.attribute( "label" ),
+							xmlSuitabilityItem.attribute( "color" ),
+							nPixelCountForSuitabilityCategory,
+							nAreaPerPixel * nPixelCountForSuitabilityCategory
+						);
+						arySketchSuitabilityInfos.push( oSuitabilityInfo );
+					}
+				}
+				
+				suitabilityClassData = arySketchSuitabilityInfos;
+				dispatchEvent( new Event( "histogramDataChanged" ) );
+			}
+			
+			protected function onComputeHistogramFault(event:FaultEvent):void {
+				Alert.show(this, "Problem computing result stats: " + event.fault.message, "Exception", true);
+				suitabilityClassData = null;
+				dispatchEvent( new Event( "histogramDataChanged" ) );
+			}
+			
+		]]>
+	</fx:Script>
+	<s:HGroup verticalAlign="middle">
+		<s:CheckBox id="chkDrawFreehand" label="Draw freehand" click="editor.templatePicker.clearSelection();" selected="true"/>
+<!--		<s:Button id="btnRefreshSketch" label="Refresh Sketch" click="sketchFeatureLayer.refresh();updateDashboardStats(sketchFeatureLayer);"
+				  visible="false" includeInLayout="false"/>-->
+		<s:Spacer width="10"/>
+		<s:VGroup width="150" gap="-1" horizontalAlign="contentJustify">
+			<s:Label text="Opacity" textAlign="left"/>
+			<s:HSlider id="sketchTransparency" minimum="0" maximum="1.0" liveDragging="true"
+					   width="100%"
+					   showDataTip="false" snapInterval="0.05" value="{_sketchFeatureLayer.alpha}">
+				<s:valueCommit>
+					<![CDATA[
+					_sketchFeatureLayer.alpha = (event.currentTarget as HSlider).value;
+					]]>
+				</s:valueCommit>
+			</s:HSlider>
+		</s:VGroup>
+	</s:HGroup>
+	
+	<esri:Editor id="editor"
+				 map="{this.map}" featureLayers="{[ sketchFeatureLayer ]}" geometryService="{geomService}"
+				 toolbarVisible="false">
+		<esri:createOptions>
+			<esri:CreateOptions polygonDrawTools="{[defaultPolygonDrawTool(chkDrawFreehand.selected)]}"/>
+		</esri:createOptions>
+	</esri:Editor>
+	
+	<s:Line width="100%">
+		<s:stroke>
+			<s:SolidColorStroke color="0x333333" weight="1"/>
+		</s:stroke>
+	</s:Line>
+	
+	<s:HGroup verticalAlign="middle" gap="8">
+		<s:VGroup id="grpDashboard" horizontalAlign="center"
+				  visible="{chartData != null}" includeInLayout="{chartData != null}">
+			
+			<s:Label text="All sketch categories: overview{'\n'}(Click a category for suitability details)" textAlign="center"/>
+			
+			<mx:PieChart id="chtSketchAreasRelative" width="300" height="200"
+						 showDataTips="true" dataTipFunction="sketchClassPieWedgeDataTips"
+						 dataProvider="{chartData}" mouseEnabled="true"
+						 itemClick="onChartSketchClassClick(event)">
+				<mx:series>
+					<mx:PieSeries id="serPieSketchAreas" field="area" nameField="label" 
+								  labelField="label" labelPosition="insideWithCallout"
+								  startAngle="0"
+								  fills="{chartFills}"/>
+				</mx:series>
+			</mx:PieChart>
+			
+			<s:Label id="lblTotalSketchArea" width="100%" textAlign="center"
+					 text="Total: {fmtAreaValues.format(nTotalSketchArea)} {AREA_CHART_LABEL}"/>
+			
+			<mx:ColumnChart id="chtSketchAreasAbsolute" showDataTips="true"
+							width="300" height="200" fontSize="12"
+							dataProvider="{chartData}" dataTipFunction="sketchClassColumnDataTips" 
+							itemClick="onChartSketchClassClick(event)">
+				<mx:series>
+					<mx:ColumnSeries id="serColumnY"
+									 yField="area" labelPosition="outside" labelFunction="labelAreaColumns" fontSize="9"
+									 fills="{chartFills}"/>
+				</mx:series>
+				<mx:verticalAxis>
+					<mx:LinearAxis id="sketchAreaColChartYAxis" title="Area ({AREA_CHART_LABEL})"/>
+				</mx:verticalAxis>
+				
+				<mx:verticalAxisRenderers>
+					<mx:AxisRenderer tickPlacement="none" axis="{sketchAreaColChartYAxis}"/>
+				</mx:verticalAxisRenderers>
+				
+				<mx:horizontalAxis>
+					<mx:CategoryAxis id="sketchAreaColChartXAxis" categoryField="label"/>
+				</mx:horizontalAxis>
+				<mx:horizontalAxisRenderers>
+					<mx:AxisRenderer fontSize="10" axis="{sketchAreaColChartXAxis}"/>
+				</mx:horizontalAxisRenderers>
+			</mx:ColumnChart>
+		</s:VGroup>
+		
+		<s:Line height="100%" visible="{currentState=='detail'}" includeInLayout="{currentState=='detail'}">
+			<s:stroke>
+				<s:SolidColorStroke color="0x333333" weight="1"/>
+			</s:stroke>
+		</s:Line>
+		
+		<s:Group visible="false" includeInLayout="false" visible.detail="true" includeInLayout.detail="true">
+			<s:VGroup id="grpSketchClassStats" gap="8" horizontalAlign="center">
+				
+				<s:Label text="Selected sketch category: suitability details"/>
+				
+				<mx:PieChart id="chtSketchClassSuitabilityRelative" width="300" height="200"
+							 dataTipFunction="sketchSuitabilityPieWedgeDataTips"
+							 showDataTips="true" dataProvider="{suitabilityClassData}">
+					<mx:series>
+						<mx:PieSeries id="serPieSketchStats" 
+									  field="area" nameField="label" labelField="label"
+									  labelPosition="insideWithCallout"
+									  fillFunction="suitabilityFill" />
+					</mx:series>
+				</mx:PieChart>
+				
+				<s:Label width="100%" textAlign="center"
+						 text="{_selectedChartSketchClass.label} ({_selectedChartSketchClass.area.toFixed(2)} {AREA_CHART_LABEL})" />
+				
+				<mx:ColumnChart id="chtSketchClassSuitabilityAbsolute" showDataTips="true" 
+								width="300" height="200" fontSize="12"
+								dataTipFunction="sketchSuitabilityColumnDataTips"
+								dataProvider="{suitabilityClassData}">
+					<mx:series>
+						<mx:ColumnSeries id="serColSketchStats"
+										 yField="area" labelField="label"
+										 fillFunction="suitabilityFill"/>
+					</mx:series>
+					<mx:verticalAxis>
+						<mx:LinearAxis id="sketchSuitabilityColChartYAxis" title="Area ({AREA_CHART_LABEL})"/>
+					</mx:verticalAxis>
+					<mx:horizontalAxis>
+						<mx:CategoryAxis id="sketchSuitabilityColChartXAxis" categoryField="label"/>
+					</mx:horizontalAxis>
+					<mx:horizontalAxisRenderers>
+						<mx:AxisRenderer fontSize="10" axis="{sketchSuitabilityColChartXAxis}"/>
+					</mx:horizontalAxisRenderers>
+				</mx:ColumnChart>							
+			</s:VGroup>
+			
+			<s:Button label="Close" top="20" right="5" click="currentState='overview'"/>
+		</s:Group>
+
+	</s:HGroup>
+</s:TitleWindow>

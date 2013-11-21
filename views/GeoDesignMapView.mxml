@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:esri="http://www.esri.com/2008/ags"
+		backgroundColor="0x303030" 
+		xmlns:wols="components.WeightedOverlaySettings.*" 
+		xmlns:MapLayers="components.MapLayers.*"
+		creationComplete="application1_creationCompleteHandler(event)"
+		currentState="analyze" 
+		xmlns:Sketch="components.Sketch.*" 
+		xmlns:GIFPlayer="GIFPlayer.*">
+	<s:states>
+		<s:State name="noPanel" enterState="state_noPanel_enter(event)"/>
+		<s:State name="analyze" enterState="state_analyze_enter(event)"/>
+		<s:State name="sketch" enterState="state_sketch_enter(event)"/>
+	</s:states>
+	<fx:Script>
+		<![CDATA[
+			import com.esri.ags.geometry.Extent;
+			
+			import components.WeightedOverlayRasterItemSlider.OverlayReclass;
+			import components.WeightedOverlayRasterItemSlider.OverlayReclassDiscrete;
+			import components.WeightedOverlayRasterItemSlider.OverlayReclassRange;
+			import components.WeightedOverlaySettings.OverlayVariableSettings;
+			
+			import mx.collections.ArrayCollection;
+			import mx.collections.XMLListCollection;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			[Bindable]
+			private var basemapUrl				: String;
+			[Bindable]
+			private var geomSvcUrl				: String;
+			[Bindable]
+			private var imgSvcUrl				: String;
+			[Bindable]
+			private var sketchFeatureSvcUrl		: String;
+			[Bindable]
+			private var overlayLayerLoading		: Boolean = false;
+			[Bindable]
+			private var xmlConfig				: XML;
+			
+			protected function application1_creationCompleteHandler(event:FlexEvent):void
+			{
+				var file:File = File.applicationDirectory.resolvePath( "config.xml" );
+				var stream:FileStream = new FileStream();
+				
+				stream.open( file, FileMode.READ );
+				xmlConfig = new XML( stream.readUTFBytes( stream.bytesAvailable ));
+				stream.close();
+				
+				var extent:Extent = new Extent(	
+					xmlConfig.initialExtent.@xmin.valueOf(),
+					xmlConfig.initialExtent.@ymin.valueOf(),
+					xmlConfig.initialExtent.@xmax.valueOf(),
+					xmlConfig.initialExtent.@ymax.valueOf(),
+					map.spatialReference);
+				map.extent = extent;
+			}
+			
+			protected function state_noPanel_enter(event:FlexEvent):void
+			{
+				PopUpManager.removePopUp(overlaySettingsPanel);
+				PopUpManager.removePopUp(sketchEditingPanel);
+			}
+			
+			protected function state_analyze_enter(event:FlexEvent):void
+			{
+ 				// Hide sketch panel
+				PopUpManager.removePopUp(sketchEditingPanel); 
+				// Show analysis panel
+				PopUpManager.addPopUp(overlaySettingsPanel, this, false);
+			}
+			
+			protected function state_sketch_enter(event:FlexEvent):void
+			{
+ 				// Hide analysis panel
+				PopUpManager.removePopUp(overlaySettingsPanel);
+				// Show sketch panel
+				PopUpManager.addPopUp(sketchEditingPanel, this, false); 
+			}
+			
+			/** Converts analysis settings portion of configuration XML into an Array
+			 *  of OverlayVariableSettings objects needed by the analysis settings panel.
+			 **/
+			private function settingsArray(settingsXml:XMLList):ArrayCollection {
+				var ary:ArrayCollection = new ArrayCollection();
+				for each (var variable:XML in settingsXml.variable) {
+					var setting:OverlayVariableSettings = new OverlayVariableSettings();
+					setting.title = variable.@title;
+					setting.startWeightPct = variable.@startWeightPct.valueOf();
+					var aryReclassInfos:ArrayCollection = new ArrayCollection();
+					for each (var reclassInfo:XML in variable.reclass) {
+						var reclass:OverlayReclass;
+						if (reclassInfo.@type == OverlayReclassRange.RECLASS_TYPENAME)
+							reclass = new OverlayReclassRange(reclassInfo.@startLabel, reclassInfo.@endLabel, reclassInfo.@startValue.valueOf(), reclassInfo.@endValue.valueOf(), reclassInfo.@reclassValue.valueOf());
+						else if (reclassInfo.@type == OverlayReclassDiscrete.RECLASS_TYPENAME)
+							reclass = new OverlayReclassDiscrete(reclassInfo.@label, reclassInfo.@value.valueOf(), reclassInfo.@reclassValue.valueOf());
+						aryReclassInfos.addItem(reclass);
+					} 
+					setting.reclassInfos = aryReclassInfos;
+					setting.rasterId = variable.@rasterId;
+					setting.weightParamName = variable.@weightParamName;
+					setting.rasterIdParamName = variable.@rasterIdParamName;
+					setting.inputRangesParamName = variable.@inputRangesParamName;
+					setting.outputValuesParamName = variable.@outputValuesParamName;
+					ary.addItem(setting);
+				}   
+				return ary;
+			} 
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<wols:SettingsPanel id="overlaySettingsPanel"
+							height="625" minWidth="275"
+							title="{xmlConfig.labels.analysisPanelTitle}" 
+							close="currentState='noPanel';"
+							settings="{settingsArray(xmlConfig.analysisSettings)}"
+							rasterFunctionName="{xmlConfig.analysisSettings.rasterFunctionName}"
+							/>
+		<Sketch:SketchTemplates id="sketchEditingPanel"
+								title="{xmlConfig.labels.sketchPanelTitle}"
+								map="{map}" sketchFeatureLayer="{lyrSketch}" geomService="{svcGeom}"
+								close="currentState='noPanel';"
+								/>
+		<esri:GeometryService id="svcGeom" url="{xmlConfig.services.geometrySvc.@url}"/>
+		
+		<s:NumberFormatter id="fmtPixelArea" useGrouping="true"/>
+	</fx:Declarations>
+	
+	<esri:Map id="map" top="5" left="5" right="5" bottom="5" wrapAround180="true">
+		<esri:ArcGISTiledMapServiceLayer url="{lstBasemaps.selectedItem.@url}" width="100%" height="100%"/>
+		<MapLayers:ArcGISImageServerLayer_JSONFix id="lyrImgSvc"  
+												  visible="{!chkHideAnalysis.selected &amp;&amp; overlaySettingsPanel.analysisLayerShouldBeVisible}"
+												  url="{xmlConfig.services.suitability.@imgSvcUrl}" 
+												  renderingRuleJSON="{overlaySettingsPanel.renderingRuleJSON}"										
+												  interpolation="RSP_BilinearInterpolation"
+												  updateStart="overlayLayerLoading = true;" updateEnd="overlayLayerLoading = false;"
+												  />
+		<esri:FeatureLayer id="lyrSketch"
+						   url="{xmlConfig.services.sketchFeatures.@featSvcUrl}"
+						   outFields="[Class, Comments]"
+						   mode="snapshot" useAMF="false"
+						   alpha="0.6">
+		</esri:FeatureLayer>						   
+	</esri:Map>
+	
+	<s:VGroup top="10" right="10" horizontalAlign="right">
+		<s:HGroup id="grpControlButtons" verticalAlign="middle">
+			<GIFPlayer:GIFPlayerComponent width="16" height="16"
+										  url="assets/images/circle-ball-dark-antialiased.gif" visible="{overlayLayerLoading}"/>
+			
+			<s:ButtonBar id="bbPanels"
+						 selectedIndex.analyze="0" selectedIndex.sketch="1" selectedIndex.noPanel="-1">
+				<s:ArrayCollection>
+					<fx:Object label="Analyze" targetState="analyze"/>
+					<fx:Object label="Sketch" targetState="sketch"/>
+				</s:ArrayCollection>
+				
+				<s:change>
+					<![CDATA[
+					var obj:Object = ButtonBar(event.currentTarget).selectedItem;
+					currentState = (obj == null) ? "noPanel" : obj.targetState;
+					]]>
+				</s:change>
+			</s:ButtonBar>
+			
+			<s:CheckBox id="chkHideAnalysis" width="{lstBasemaps.width}" 
+							label="{chkHideAnalysis.selected ? 'Show Analysis' : 'Hide Analysis'}" 
+							selected="false"/>
+		</s:HGroup>
+		
+		<s:HGroup verticalAlign="middle">
+			<s:CalloutButton id="basemaps" label="Basemap">
+				<s:List id="lstBasemaps" height="100%" width="100%" 
+						dataProvider="{new XMLListCollection(xmlConfig.services.basemaps.basemap)}"
+						labelField="@label"
+						valueCommit="basemaps.closeDropDown();">
+					<s:layout>
+						<s:VerticalLayout requestedMaxRowCount="4" horizontalAlign="contentJustify"
+										  gap="0" verticalAlign="middle"/>
+					</s:layout>
+				</s:List>
+			</s:CalloutButton>
+		</s:HGroup>
+	</s:VGroup>
+	
+<!--	<s:Label id="txtPixelSize" bottom="25" right="120" 
+			 visible="{false/*lyrImgSvc.visible*/}" 
+			 paddingBottom="2" paddingTop="2" paddingLeft="2" paddingRight="2"
+			 backgroundColor="White" backgroundAlpha="0.5"/>-->
+	
+</s:View>

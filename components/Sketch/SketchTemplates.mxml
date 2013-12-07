@@ -510,44 +510,51 @@
 		</s:Line>
 		
 		<s:Group visible="false" includeInLayout="false" visible.detail="true" includeInLayout.detail="true">
-			<s:VGroup id="grpSketchClassStats" gap="8" horizontalAlign="center">
+			<s:HGroup>
 				
-				<s:Label text="Selected sketch category: suitability details"/>
+				<s:VGroup id="grpSketchClassStats" gap="8" horizontalAlign="center">
+					
+					<s:Label text="Selected sketch category: suitability details"/>
+					
+					<mx:PieChart id="chtSketchClassSuitabilityRelative" width="300" height="200"
+								 dataTipFunction="sketchSuitabilityPieWedgeDataTips"
+								 showDataTips="true" dataProvider="{suitabilityClassData}">
+						<mx:series>
+							<mx:PieSeries id="serPieSketchStats" 
+										  field="area" nameField="label" labelField="label"
+										  labelPosition="insideWithCallout"
+										  fillFunction="suitabilityFill" />
+						</mx:series>
+					</mx:PieChart>
+					
+					<s:Label width="100%" textAlign="center"
+							 text="{_selectedChartSketchClass.label} ({_selectedChartSketchClass.area.toFixed(2)} {AREA_CHART_LABEL})" />
+					
+					<mx:ColumnChart id="chtSketchClassSuitabilityAbsolute" showDataTips="true" 
+									width="300" height="200" fontSize="12"
+									dataTipFunction="sketchSuitabilityColumnDataTips"
+									dataProvider="{suitabilityClassData}">
+						<mx:series>
+							<mx:ColumnSeries id="serColSketchStats"
+											 yField="area" labelField="label"
+											 fillFunction="suitabilityFill"/>
+						</mx:series>
+						<mx:verticalAxis>
+							<mx:LinearAxis id="sketchSuitabilityColChartYAxis" title="Area ({AREA_CHART_LABEL})"/>
+						</mx:verticalAxis>
+						<mx:horizontalAxis>
+							<mx:CategoryAxis id="sketchSuitabilityColChartXAxis" categoryField="label"/>
+						</mx:horizontalAxis>
+						<mx:horizontalAxisRenderers>
+							<mx:AxisRenderer fontSize="10" axis="{sketchSuitabilityColChartXAxis}"/>
+						</mx:horizontalAxisRenderers>
+					</mx:ColumnChart>							
+				</s:VGroup>
 				
-				<mx:PieChart id="chtSketchClassSuitabilityRelative" width="300" height="200"
-							 dataTipFunction="sketchSuitabilityPieWedgeDataTips"
-							 showDataTips="true" dataProvider="{suitabilityClassData}">
-					<mx:series>
-						<mx:PieSeries id="serPieSketchStats" 
-									  field="area" nameField="label" labelField="label"
-									  labelPosition="insideWithCallout"
-									  fillFunction="suitabilityFill" />
-					</mx:series>
-				</mx:PieChart>
-				
-				<s:Label width="100%" textAlign="center"
-						 text="{_selectedChartSketchClass.label} ({_selectedChartSketchClass.area.toFixed(2)} {AREA_CHART_LABEL})" />
-				
-				<mx:ColumnChart id="chtSketchClassSuitabilityAbsolute" showDataTips="true" 
-								width="300" height="200" fontSize="12"
-								dataTipFunction="sketchSuitabilityColumnDataTips"
-								dataProvider="{suitabilityClassData}">
-					<mx:series>
-						<mx:ColumnSeries id="serColSketchStats"
-										 yField="area" labelField="label"
-										 fillFunction="suitabilityFill"/>
-					</mx:series>
-					<mx:verticalAxis>
-						<mx:LinearAxis id="sketchSuitabilityColChartYAxis" title="Area ({AREA_CHART_LABEL})"/>
-					</mx:verticalAxis>
-					<mx:horizontalAxis>
-						<mx:CategoryAxis id="sketchSuitabilityColChartXAxis" categoryField="label"/>
-					</mx:horizontalAxis>
-					<mx:horizontalAxisRenderers>
-						<mx:AxisRenderer fontSize="10" axis="{sketchSuitabilityColChartXAxis}"/>
-					</mx:horizontalAxisRenderers>
-				</mx:ColumnChart>							
-			</s:VGroup>
+				<s:VGroup id="grpCensusEnrichment" visible="false" includeInLayout="false">
+					
+				</s:VGroup>
+			</s:HGroup>
 			
 			<s:Button label="Close" top="20" right="5" click="currentState='overview'"/>
 		</s:Group>

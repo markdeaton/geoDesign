@@ -9,10 +9,27 @@
 	<s:states>
 		<s:State name="overview"/>
 		<s:State name="detail"/>
+		<s:State name="detailWithPopInfo"/>
 	</s:states>
 	<s:layout>
 		<s:VerticalLayout paddingTop="5" paddingLeft="5" paddingRight="5" paddingBottom="5" gap="8"/>
 	</s:layout>
+	
+	<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		@namespace esri "http://www.esri.com/2008/ags";
+		
+		.tractStatNumbers {
+			fontSize: 16;
+			color: #009999;
+			fontStyle: italic;			
+		}
+		
+		.verticalPaneSeparatorLines {
+			
+		}
+	</fx:Style>
 	<fx:Declarations>
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
 		<esri:Query id="qryAllFeatures" where="1=1" returnGeometry="true" returnM="false" returnZ="false"/>
@@ -24,6 +41,44 @@
 					   result="onComputeHistogramResult(event)"
 					   fault="onComputeHistogramFault(event)"
 					   resultFormat="text"/>
+		
+		<esri:QueryTask id="qtCensusTracts" 
+						url="http://tigerweb.geo.census.gov/arcgis/rest/services/Census2010/Tracts_Blocks/MapServer/0"
+						method="POST" useAMF="false"					
+						executeComplete="onGetCensusTractsComplete(event)"
+						fault="onGetCensusTractsFault(event)"
+						/>
+		<s:HTTPService id="htsTractStats"
+					   method="GET" 
+					   result="onTractStatsResult(event)"
+					   fault="onTractStatsFault(event)"
+					   resultFormat="object" 
+					   />
+		<fx:Object id="m_oTractVars"
+				   B25043_007E="Owner occupied, No telephone service available"
+				   B25043_016E="Renter occupied, No telephone service available"
+				   B25044_003E="Owner occupied: No vehicle available"
+				   B25044_010E="Renter occupied: No vehicle available"
+				   B25096_002E="Total with a mortgage"
+				   B25096_003E="under $50K"
+				   B25096_004E="$50K-100K"
+				   B25096_005E="$100K-150K"
+				   B25096_006E="$150K-200K"
+				   B25096_007E="$200K-300K"
+				   B25096_008E="$300K-500K"
+				   B25096_009E="&gt; $500K"
+				   B25116_001E="Total occupied housing units"
+				   B25116_002E="Total owner occupied housing units"
+				   B25116_007E="Owner occupied: 1-person household: Householder 75 years and over"
+				   B25116_013E="Total Renter Occupied"
+				   B25116_018E="Renter occupied: 1-person household: Householder 75 years and over"
+				   B16002_004E="No English; Spanish"
+				   B16002_007E="No English; other Indo-European"
+				   B16002_010E="No English; Asian/Pacific Islands"
+				   B16002_013E="No English; other"
+				   
+				   >
+		</fx:Object>
 		<s:NumberFormatter id="fmtAreaValues" useGrouping="true" fractionalDigits="2"/>
 </fx:Declarations>
 	
@@ -37,9 +92,12 @@
 			import com.esri.ags.components.supportClasses.Template;
 			import com.esri.ags.events.DrawEvent;
 			import com.esri.ags.events.FeatureLayerEvent;
+			import com.esri.ags.events.QueryEvent;
 			import com.esri.ags.events.TemplatePickerEvent;
 			import com.esri.ags.geometry.Polygon;
 			import com.esri.ags.layers.FeatureLayer;
+			import com.esri.ags.layers.supportClasses.FeatureEditResult;
+			import com.esri.ags.layers.supportClasses.FeatureEditResults;
 			import com.esri.ags.layers.supportClasses.RasterFunction;
 			import com.esri.ags.symbols.SimpleFillSymbol;
 			import com.esri.ags.tasks.GeometryService;
@@ -57,6 +115,8 @@
 			import mx.charts.chartClasses.Series;
 			import mx.charts.events.ChartItemEvent;
 			import mx.charts.series.items.PieSeriesItem;
+			import mx.collections.ArrayCollection;
+			import mx.collections.ISort;
 			import mx.events.FlexEvent;
 			import mx.graphics.IFill;
 			import mx.graphics.SolidColor;
@@ -65,6 +125,9 @@
 			import mx.rpc.Fault;
 			import mx.rpc.events.FaultEvent;
 			import mx.rpc.events.ResultEvent;
+			
+			import spark.collections.Sort;
+			import spark.collections.SortField;
 			
 			private const AREA_UNITS			: String = GeometryService.UNIT_SQUARE_MILES;
 			private const AREA_CHART_LABEL		: String = "sq mi";
@@ -86,13 +149,21 @@
 			private var chartData				: Array;
 			/** Data provider for sketch result stats **/
 			[Bindable(event="histogramDataChanged")]
-			private var suitabilityClassData			: Array;
+			private var suitabilityClassData	: Array;
 			/** Colors for the chart categories, taken from the feature service editing templates **/
 			[Bindable(event="chartDataChanged")]
 			private var chartFills				: Array;
 			/** Total sketched area, for label **/
+			/** Census tract data for sketched area **/
+			[Bindable(event="tractDataChanged")]
+			private var tractData				: Object;
+			[Bindable(event="tractMortgageDataChanged")]
+			private var tractMortgageData		: Array;
 			[Bindable]
 			private var nTotalSketchArea		: Number;
+			/** Multiple tract queries are made for a sketch; keep track of when they've all completed **/
+			private var m_outstandingTractQueries:int = 0;
+			private var m_allTractQueriesInvoked:Boolean = true;
 			
 			public function set rfAnalysisSettings(value:RasterFunction):void
 			{
@@ -144,19 +215,56 @@
 			protected function sketchWindow_removeHandler(event:FlexEvent):void
 			{
 				editor.templatePicker.clearSelection();
-				sketchFeatureLayer.removeEventListener(FeatureLayerEvent.EDITS_COMPLETE, sketchLayer_editsComplete);
+				sketchFeatureLayer.removeEventListener(FeatureLayerEvent.EDITS_COMPLETE, onSketchLayer_editsComplete);
 			}
 			
 			protected function sketchWindow_addHandler(event:FlexEvent):void
 			{
-				sketchFeatureLayer.addEventListener(FeatureLayerEvent.EDITS_COMPLETE, sketchLayer_editsComplete);
+				sketchFeatureLayer.addEventListener(FeatureLayerEvent.EDITS_COMPLETE, onSketchLayer_editsComplete);
 				// Don't wait for a feature edit to update the dashboard when the window is first opened
-				updateDashboardStats(sketchFeatureLayer);
+				updateOverviewChartStats(sketchFeatureLayer);
 			}
 			
 			/** Whenever any kind of edit is done, query for the features and update statistics dashboard with the results **/
-			protected function sketchLayer_editsComplete(event:FeatureLayerEvent):void {
-				updateDashboardStats(event.featureLayer);
+			protected function onSketchLayer_editsComplete(event:FeatureLayerEvent):void {
+				updateOverviewChartStats(event.featureLayer);
+				
+				// Unsuccessful attempt to update selected chart sketch class to most recently drawn area.
+				// Fails because call to updateOverviewChartStats above makes async call to refresh feature data; 
+				// the call returns before data is available, which makes obsolete the chart data ultimately displayed by the below logic.
+/* 				var sSubtypeAttributeName:String = editor.templatePicker.templateCollection[0].featureLayer.layerDetails.typeIdField;			
+				var addedOrEditedFeatureId:int = int.MIN_VALUE;
+				var sOIDAttributeName:String = event.featureLayer.layerDetails.objectIdField;
+				var fers:FeatureEditResults = event.featureEditResults;
+				
+				var successfulAdds:Array = fers.addResults.filter(function(fer:FeatureEditResult, i:int, a:Array):Boolean {
+					return fer.success;
+				});
+				var successfulEdits:Array = fers.updateResults.filter(function(fer:FeatureEditResult, i:int, a:Array):Boolean {
+					return fer.success;
+				});
+				
+				if (successfulAdds.length > 0) {
+					addedOrEditedFeatureId = successfulAdds[successfulAdds.length - 1].objectId;
+				} else if (successfulEdits.length > 0) {
+					addedOrEditedFeatureId = successfulEdits[successfulEdits.length - 1].objectId;
+				} else {
+					_selectedChartSketchClass = null;
+				}
+				
+				if (addedOrEditedFeatureId != int.MIN_VALUE) {
+					var feat:Graphic = event.featureLayer.graphicProvider.toArray().filter(function(f:Graphic, i:int, a:Array):Boolean {
+						return f.attributes[sOIDAttributeName] == this;
+					}, addedOrEditedFeatureId)[0];
+					var iCategoryValue:int = feat.attributes[sSubtypeAttributeName];
+					for each (var oClass:SketchClassAreaInfo in chartData) {
+						if (oClass.categoryValue == iCategoryValue) {
+							_selectedChartSketchClass = oClass;
+							break;
+						}
+					}					
+				} */
+				
 				if (_selectedChartSketchClass && chartData) 
 					computeHistogram();
 				else
@@ -164,7 +272,7 @@
 			}
 			
 			/** Calls on the geometry service to get feature area info; then assembles the data and updates the charts **/
-			protected function updateDashboardStats(lyrFeatures:FeatureLayer):void {
+			protected function updateOverviewChartStats(lyrFeatures:FeatureLayer):void {
 				lyrFeatures.queryFeatures(qryAllFeatures, new AsyncResponder(
 					function(allFeatures:FeatureSet, token:Object = null):void {
 						// Query for areas; then merge the results into the features and send to another
@@ -176,11 +284,11 @@
 							areaCalcParams.polygons = polygons;
 							geomService.areasAndLengths(areaCalcParams, new AsyncResponder(
 								function(allAreas:AreasAndLengthsResult, token:Object=null):void {
-									/// Assumption: result areas array is in same order as original polygons array sent in
+									// TODO : Assumption: result areas array is in same order as original polygons array sent in
 									for (var i:int = 0; i < allAreas.areas.length; i++) {
 										(allFeatures.features[i] as Graphic).attributes[AREA_ATTR_NAME] = allAreas.areas[i];
 									}
-									applyUpdatedStatsToCharts(allFeatures, editor);
+									applyUpdatedStatsToOverviewCharts(allFeatures, editor);
 								},
 								function(fault:Fault, token:Object=null):void {
 									Alert.show(this, "Data Retrieval Error", "Error getting polygon areas: " + fault.message, true);
@@ -199,8 +307,10 @@
 				));
 			}
 			
-			/** Update dashboard controls to show stats on latest features in this feature layer. **/
-			private function applyUpdatedStatsToCharts(fs:FeatureSet, ed:Editor):void {
+			/** Update overview/area charts to show stats on latest features in this feature layer.
+			 *  chartData ends up having one one item per sketch template category.
+			**/
+			private function applyUpdatedStatsToOverviewCharts(fs:FeatureSet, ed:Editor):void {
 				var aryClasses:Array = new Array();
 				var iCategoryValue:int;
 				var sSubtypeAttributeName:String = ed.templatePicker.templateCollection[0].featureLayer.layerDetails.typeIdField;
@@ -305,31 +415,31 @@
 				dispatchEvent(new Event("chartDataChanged"));
 			}
 			
-			protected function sketchLayer_sketchStarted(event:DrawEvent):void {
+			protected function onSketchLayer_sketchStarted(event:DrawEvent):void {
 				_fillSymbolForSketchInProgress = editor.templatePicker.selectedTemplate.symbol.clone() as SimpleFillSymbol;
 				// event.graphic == null?
 				(editor.drawTool.fillSymbol as SimpleFillSymbol).alpha = 0.6;
 				(editor.drawTool.fillSymbol as SimpleFillSymbol).outline.width = 2;
 			}
 			
-			protected function sketchLayer_sketchEnded(event:DrawEvent):void {
+			protected function onSketchLayer_sketchEnded(event:DrawEvent):void {
 				(event.graphic.symbol as SimpleFillSymbol).outline.width = _fillSymbolForSketchInProgress.outline.width;
 				(event.graphic.symbol as SimpleFillSymbol).alpha = _fillSymbolForSketchInProgress.alpha;
 			}
 			
-			protected function sketchLayer_templateSelected(event:TemplatePickerEvent):void {
+			protected function onSketchLayer_templateSelected(event:TemplatePickerEvent):void {
 				var fl:FeatureLayer = (event.currentTarget as TemplatePicker).featureLayers[0];
 				// Refresh the sketch layer to bring in any new data from other users
 				fl.refresh();
 				// Update charting components as well
-				updateDashboardStats(fl);
+				updateOverviewChartStats(fl);
 			}
 			
 			protected function sketchWindow_creationCompleteHandler(event:FlexEvent):void
 			{
-				editor.drawTool.addEventListener(DrawEvent.DRAW_START, sketchLayer_sketchStarted);
-				editor.drawTool.addEventListener(DrawEvent.DRAW_END, sketchLayer_sketchEnded);
-				editor.templatePicker.addEventListener(TemplatePickerEvent.SELECTED_TEMPLATE_CHANGE, sketchLayer_templateSelected);
+				editor.drawTool.addEventListener(DrawEvent.DRAW_START, onSketchLayer_sketchStarted);
+				editor.drawTool.addEventListener(DrawEvent.DRAW_END, onSketchLayer_sketchEnded);
+				editor.templatePicker.addEventListener(TemplatePickerEvent.SELECTED_TEMPLATE_CHANGE, onSketchLayer_templateSelected);
 			}
 			
 			protected function onChartSketchClassClick(event:ChartItemEvent):void
@@ -338,6 +448,9 @@
 				
 				// Query for histogram for this data class; show sketch class stats charts
 				var oClass:SketchClassAreaInfo = event.hitData.item as SketchClassAreaInfo;
+				makeChartClassSelection( oClass );
+			}
+			private function makeChartClassSelection( oClass:SketchClassAreaInfo ):void {
 				_selectedChartSketchClass = oClass;
 				
 				// Ask the server for a histogram of the areas covered by the desired sketch;
@@ -345,6 +458,10 @@
 				// so don't compute a histogram for an empty chart item
 				if (_selectedChartSketchClass.features.length > 0) {
 					computeHistogram();
+					
+					tractData = null;
+					dispatchEvent(new Event("tractDataChanged"));
+					
 					currentState = "detail";
 				}
 				else currentState = "overview";
@@ -361,15 +478,24 @@
 						pgnSketches.addRing(aryRing);
 					}
 				}
-				// Bundle up the params and submit
-				var oParams:Object = {
+				
+				// 1. Go get list of census tracts intersected by the sketch; these will help get population stats later
+				var qryCensusTractsParams:Query = new Query();
+				qryCensusTractsParams.geometry = pgnSketches;
+				qryCensusTractsParams.returnGeometry = false;
+				qryCensusTractsParams.outFields = ["STATE", "COUNTY", "TRACT", "POP100"];
+				
+				qtCensusTracts.execute(qryCensusTractsParams);
+				
+				// 2. Compute the histogram in the suitability surface underlying the sketch 
+				var oHistogramParams:Object = {
 					"f"					: "json",
 					"geometryType"		: "esriGeometryPolygon",
 					"geometry"			: JSONUtil.encode(pgnSketches),
 					"renderingRule"		: JSONUtil.encode(_rfAnalysisSettings)
 				};
 				
-				var at:AsyncToken = htsComputeHistogram.send(oParams);
+				var at:AsyncToken = htsComputeHistogram.send(oHistogramParams);
 				at.area = _selectedChartSketchClass.area;
 			}
 			
@@ -421,6 +547,199 @@
 				dispatchEvent( new Event( "histogramDataChanged" ) );
 			}
 			
+			
+			protected function onGetCensusTractsComplete(event:QueryEvent):void
+			{
+				// Use these results to get desired statistics from the Census APIs
+//				var aryIds:Array = event.objectIds;
+//				var fsTracts:FeatureSet = event.featureSet;
+				var aryResults:ArrayCollection = new ArrayCollection(event.featureSet.attributes);
+				
+				var aryVarname:Array = [];
+				for (var sVarname:String in m_oTractVars) aryVarname.push(sVarname);
+				var sVarnames:String = aryVarname.join(",");
+				
+				var sortFieldState:SortField = new SortField("STATE", false);
+				var sortFieldCounty:SortField = new SortField("COUNTY", false);
+				var sortByStateCounty:ISort = new Sort();
+				sortByStateCounty.fields = [sortFieldState, sortFieldCounty];
+				aryResults.sort = sortByStateCounty; aryResults.refresh();
+				var currentQueryState:String;
+				var currentQueryCounty:String;
+				var currentQueryTracts:Array = [];
+				
+				m_outstandingTractQueries = 0;
+				m_allTractQueriesInvoked = false;
+				tractData = {};
+
+				for (var i:int = 0; i < aryResults.length; i++) {
+					// Always set state, county and add tract
+					var oCurrentResult:Object = aryResults.getItemAt(i);
+					currentQueryState = oCurrentResult["STATE"]; currentQueryCounty = oCurrentResult["COUNTY"];
+					currentQueryTracts.push(oCurrentResult["TRACT"]);
+
+					// States: first row; last row; new tract; upcoming new state or new county
+					var bIsFirstRow:Boolean = (i == 0);
+					var bIsLastRow:Boolean = (i == aryResults.length - 1);
+					var oNextResult:Object = bIsLastRow ? null : aryResults.getItemAt(i + 1);
+					var bUpcomingNewStateOrCounty:Boolean;
+					if (!bIsLastRow) bUpcomingNewStateOrCounty = 
+							oNextResult["STATE"] != oCurrentResult["STATE"]
+						||	oNextResult["COUNTY"] != oCurrentResult["COUNTY"];
+					
+					// If (upcoming new state or new county) or (last row), build url, execute the query, clear vars for next time
+					if (bUpcomingNewStateOrCounty || bIsLastRow) {
+						var sUrl:String = "/flexcensusapiproxy/proxy.ashx?http://api.census.gov/data/2011/acs5"
+							+ "?"
+							+ "key=33e14683d2646d649c843c815335a9a70c2f2063"
+							+ "&"
+							+ "get=" + sVarnames
+							+ "&"
+							+ "for=tract:" + currentQueryTracts.join(",")
+							+ "&"
+							+ "in=state:" + currentQueryState + "+county:" + currentQueryCounty;
+						
+						htsTractStats.url = sUrl;
+						htsTractStats.send(null);
+						m_outstandingTractQueries++;
+						
+						currentQueryState = currentQueryCounty = null; currentQueryTracts = [];
+					}
+				}
+				m_allTractQueriesInvoked = true;
+/* 				var aryStates:Array = [];
+				var aryCounties:Array = [];
+				var aryTracts:Array = [];
+				
+				// Get arrays of unique states and counties
+				for each (var tract:Object in fsTracts.attributes) {
+					var sCounty:String = tract["COUNTY"];
+					var sState:String = tract["STATE"];
+					var sTract:String = tract["TRACT"];
+					if (!aryStates.some(
+						function(o:String, i:int, a:Array):Boolean {
+							return o == sState;
+						}, null))
+						aryStates.push(sState);
+					if (!aryCounties.some(
+						function(o:String, i:int, a:Array):Boolean {
+							return o == sCounty;
+						}, null))
+						aryCounties.push(sCounty);
+					if (!aryTracts.some(
+						function(o:String, i:int, a:Array):Boolean {
+							return o == sTract;
+						}, null))
+						aryTracts.push(sTract);
+				}
+			
+				var sStates:String = aryStates.join(",");
+				var sCounties:String = aryCounties.join(",");
+				var sTracts:String = aryTracts.join(",");
+				
+				var aVarname:Array = [];
+				for (var sVarname:String in m_oTractVars) aVarname.push(sVarname);
+				
+				var sUrl:String = "/flexcensusapiproxy/proxy.ashx?http://api.census.gov/data/2011/acs5"
+							+ "?"
+							+ "key=33e14683d2646d649c843c815335a9a70c2f2063"
+							+ "&"
+							+ "get=" + aVarname.join(",") //P0030001,H0160001,H0160002,H0160011,H0170001,PCO0020001,P0210030"
+							+ "&"
+							+ "for=tract:" + sTracts
+							+ "&"
+							+ "in=state:" + sStates + "+county:" + sCounties;
+				
+				htsTractStats.url = sUrl;
+				htsTractStats.send(null); */
+			}
+			
+			protected function onGetCensusTractsFault(event:FaultEvent):void
+			{
+				// Ah, darn...
+				Alert.show(this, "Problem getting Census Tracts for sketch:\n" + event.fault.message, "Exception", true);				
+			}
+			
+			protected function onTractStatsResult(event:ResultEvent):void
+			{
+				trace(event);
+				// Put the results into a usable form
+				// This may be called many times; add up the result values in a central place
+				var oResult:Object = JSONUtil.decode(event.result.toString());
+				var aryFldList:Array = oResult[0];
+				
+				// Initialize tractdata if appropriate
+				for each (var sVal:String in aryFldList) {
+					if (m_oTractVars.hasOwnProperty(sVal)) {
+						if (!tractData.hasOwnProperty(sVal))
+							tractData[sVal] = {
+								"description"	: m_oTractVars[sVal],
+								"count"			: 0
+							}
+					}
+					else {
+						if (!tractData.hasOwnProperty(sVal))
+							tractData[sVal] = {
+								"description"	: sVal,
+								"count"			: 0,
+								"uniqueVals"	: new ArrayCollection()
+							}
+					}
+				}
+
+				for (var i:int = 1; i < oResult.length; i++) {
+					var aryResult:Array = oResult[i];
+					for (var iResult:int = 0; iResult < aryResult.length; iResult++){
+						var sResult:String = aryResult[iResult];
+						var bIsTractValue:Boolean = m_oTractVars.hasOwnProperty(aryFldList[iResult]);
+						if (bIsTractValue) {
+							var nValue:Number = parseFloat(sResult);
+							tractData[aryFldList[iResult]]["count"] += nValue;
+						}
+						else {
+							var acUniqueVals:ArrayCollection = tractData[aryFldList[iResult]]["uniqueVals"];
+							if (!acUniqueVals.contains(sResult))
+								acUniqueVals.addItem(sResult);
+						}
+					}
+				}
+				
+				if ((--m_outstandingTractQueries <= 0) && m_allTractQueriesInvoked) {
+					dispatchEvent(new Event("tractDataChanged"));
+					
+					// Compile mortgage data into a chartable format
+					tractMortgageData = [];
+					for (var iMortgageRec:int = 3; iMortgageRec < 10; iMortgageRec++) {
+						var sVar:String = "B25096_00" + iMortgageRec + "E";
+						tractMortgageData.push({
+							"label"	: tractData[sVar]["description"],
+							"value"	: tractData[sVar]["count"]
+						});
+					}
+					dispatchEvent(new Event("tractMortgageDataChanged"));
+					
+					// Set housing figure labels and show the tract data panel
+					lblTotalHomes.text = tractData["B25116_001E"]["count"];
+					lblNonEnglish.text = tractData["B16002_004E"]["count"]
+						+ tractData["B16002_007E"]["count"]
+						+ tractData["B16002_010E"]["count"]
+						+ tractData["B16002_013E"]["count"]
+					lblNoTelephone.text = tractData["B25043_007E"]["count"]
+						+ tractData["B25043_016E"]["count"];
+					lblNoVehicle.text = tractData["B25044_003E"]["count"]
+						+ tractData["B25044_010E"]["count"];
+					lblAgedHouseholders.text = tractData["B25116_007E"]["count"]
+						+ tractData["B25116_018E"]["count"];
+					currentState = "detailWithPopInfo";
+				}
+			}
+			
+			protected function onTractStatsFault(event:FaultEvent):void
+			{
+				Alert.show(this, "Problem getting Census tract details for sketch:\n" + event.fault.message, "Exception",  true);
+				trace(event);
+			}
+			
 		]]>
 	</fx:Script>
 	<s:HGroup verticalAlign="middle">
@@ -452,12 +771,12 @@
 	
 	<s:Line width="100%">
 		<s:stroke>
-			<s:SolidColorStroke color="0x333333" weight="1"/>
+			<s:SolidColorStroke color="0x999999" weight="1"/>
 		</s:stroke>
 	</s:Line>
 	
 	<s:HGroup verticalAlign="middle" gap="8">
-		<s:VGroup id="grpDashboard" horizontalAlign="center"
+		<s:VGroup id="grpDashboard" horizontalAlign="center" verticalAlign="top"
 				  visible="{chartData != null}" includeInLayout="{chartData != null}">
 			
 			<s:Label text="All sketch categories: overview{'\n'}(Click a category for suitability details)" textAlign="center"/>
@@ -503,18 +822,19 @@
 			</mx:ColumnChart>
 		</s:VGroup>
 		
-		<s:Line height="100%" visible="{currentState=='detail'}" includeInLayout="{currentState=='detail'}">
+		<s:Line height="100%" visible="{currentState!='overview'}" includeInLayout="{currentState!='overview'}">
 			<s:stroke>
-				<s:SolidColorStroke color="0x333333" weight="1"/>
+				<s:SolidColorStroke color="0x999999" weight="1"/>
 			</s:stroke>
 		</s:Line>
 		
-		<s:Group visible="false" includeInLayout="false" visible.detail="true" includeInLayout.detail="true">
-			<s:HGroup>
+		<s:Group visible="false" includeInLayout="false"
+				 visible.detailWithPopInfo="true" includeInLayout.detailWithPopInfo="true"
+				 visible.detail="true" includeInLayout.detail="true">
 				
-				<s:VGroup id="grpSketchClassStats" gap="8" horizontalAlign="center">
+				<s:VGroup id="grpSketchClassStats" gap="8" horizontalAlign="center" verticalAlign="top">
 					
-					<s:Label text="Selected sketch category: suitability details"/>
+					<s:Label text="{_selectedChartSketchClass.label} sketch category: suitability details"/>
 					
 					<mx:PieChart id="chtSketchClassSuitabilityRelative" width="300" height="200"
 								 dataTipFunction="sketchSuitabilityPieWedgeDataTips"
@@ -551,13 +871,84 @@
 					</mx:ColumnChart>							
 				</s:VGroup>
 				
-				<s:VGroup id="grpCensusEnrichment" visible="false" includeInLayout="false">
-					
-				</s:VGroup>
-			</s:HGroup>
 			
-			<s:Button label="Close" top="20" right="5" click="currentState='overview'"/>
+			<s:Button label="&lt; Close" top="20" left="5" click="currentState='overview'"/>
+			<s:Button id="btnShowTractStats" label="Pop. Info &gt;" top="20" right="5" 
+					  visible="false">
+				<s:click>
+					<![CDATA[
+						currentState = "detailWithPopInfo";
+						lblTotalHomes.text = tractData["B25116_001E"]["count"];
+					
+					]]>
+				</s:click>
+			</s:Button>
 		</s:Group>
+		
+		
+		<s:Line height="100%" visible="{currentState!='overview'}" includeInLayout="{currentState!='overview'}">
+			<s:stroke>
+				<s:SolidColorStroke color="0x999999" weight="1"/>
+			</s:stroke>
+		</s:Line>
+		
+		<s:VGroup id="grpCensusEnrichment" visible="false" includeInLayout="false"
+				  visible.detailWithPopInfo="true" includeInLayout.detailWithPopInfo="true"
+				  gap="8" horizontalAlign="center"
+				  height="100%">
+			<s:Label text="Households within the '{_selectedChartSketchClass.label}' zone"/>
+			
+			<s:Spacer height="30"/>
+			
+			<mx:Grid horizontalAlign="center">
+				<mx:GridRow>
+					<mx:GridItem><s:Label text="Total households:"/></mx:GridItem>
+					<mx:GridItem horizontalAlign="right"><s:Label id="lblTotalHomes" styleName="tractStatNumbers"/></mx:GridItem>
+				</mx:GridRow>
+				<mx:GridRow>
+					<mx:GridItem><s:Label text="Non-English-speaking households:"/></mx:GridItem>
+					<mx:GridItem horizontalAlign="right"><s:Label id="lblNonEnglish" styleName="tractStatNumbers"/></mx:GridItem>
+				</mx:GridRow>
+				<mx:GridRow>
+					<mx:GridItem><s:Label text="Households with no telephone:"/></mx:GridItem>
+					<mx:GridItem horizontalAlign="right"><s:Label id="lblNoTelephone" styleName="tractStatNumbers"/></mx:GridItem>
+				</mx:GridRow>
+				<mx:GridRow>
+					<mx:GridItem><s:Label text="Households with no vehicle:"/></mx:GridItem>
+					<mx:GridItem horizontalAlign="right"><s:Label id="lblNoVehicle" styleName="tractStatNumbers"/></mx:GridItem>
+				</mx:GridRow>
+				<mx:GridRow>
+					<mx:GridItem><s:Label text="75+ year olds living alone:"/></mx:GridItem>
+					<mx:GridItem horizontalAlign="right"><s:Label id="lblAgedHouseholders" styleName="tractStatNumbers"/></mx:GridItem>
+				</mx:GridRow>
+			</mx:Grid>
+			
+			<s:Spacer height="100%"/>
+			
+			<s:Label fontSize="14" text="Home value snapshot:"/>
+			<s:Spacer height="15"/>
+			<mx:ColumnChart  id="chtSketchMortgageValues" showDataTips="true" 
+							width="300" height="200" fontSize="12"
+							
+							dataProvider="{tractMortgageData}">
+				<mx:series>
+					<mx:ColumnSeries id="serColMortgageStats"
+									 yField="value" labelField="value" labelPosition="outside" fontSize="9"
+									 />
+				</mx:series>
+				<mx:verticalAxis>
+					<mx:LinearAxis id="mortgageColChartYAxis" title="# homes"/>
+				</mx:verticalAxis>
+				<mx:horizontalAxis>
+					<mx:CategoryAxis id="mortgageColChartXAxis" categoryField="label"/>
+				</mx:horizontalAxis>
+				<mx:horizontalAxisRenderers>
+					<mx:AxisRenderer fontSize="10" axis="{mortgageColChartXAxis}"/>
+				</mx:horizontalAxisRenderers>
+			</mx:ColumnChart>
+			
+			
+		</s:VGroup>
 
 	</s:HGroup>
 </s:TitleWindow>

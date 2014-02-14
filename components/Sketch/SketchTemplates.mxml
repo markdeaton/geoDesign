@@ -589,7 +589,7 @@
 					
 					// If (upcoming new state or new county) or (last row), build url, execute the query, clear vars for next time
 					if (bUpcomingNewStateOrCounty || bIsLastRow) {
-						var sUrl:String = "/flexcensusapiproxy/proxy.ashx?http://api.census.gov/data/2011/acs5"
+						var sUrl:String = "proxy.ashx?http://api.census.gov/data/2011/acs5"
 							+ "?"
 							+ "key=33e14683d2646d649c843c815335a9a70c2f2063"
 							+ "&"

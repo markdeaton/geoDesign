@@ -115,7 +115,7 @@
 	</fx:Script>
 	<fx:Declarations>
 		<wols:SettingsPanel id="overlaySettingsPanel"
-							height="625" minWidth="275"
+							height="450" minWidth="350"
 							title="{xmlConfig.labels.analysisPanelTitle}" 
 							close="currentState='noPanel';"
 							settings="{settingsArray(xmlConfig.analysisSettings)}"

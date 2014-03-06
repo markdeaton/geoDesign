@@ -742,12 +742,12 @@
 			
 		]]>
 	</fx:Script>
-	<s:HGroup verticalAlign="middle">
+	<s:HGroup id="grpSketchHeader" verticalAlign="middle"> <s:Label text="{grpSketchHeader.width}"/>
 		<s:CheckBox id="chkDrawFreehand" label="Draw freehand" click="editor.templatePicker.clearSelection();" selected="true"/>
 <!--		<s:Button id="btnRefreshSketch" label="Refresh Sketch" click="sketchFeatureLayer.refresh();updateDashboardStats(sketchFeatureLayer);"
 				  visible="false" includeInLayout="false"/>-->
 		<s:Spacer width="10"/>
-		<s:VGroup width="150" gap="-1" horizontalAlign="contentJustify">
+		<s:VGroup width="290" gap="-1" horizontalAlign="contentJustify">
 			<s:Label text="Opacity" textAlign="left"/>
 			<s:HSlider id="sketchTransparency" minimum="0" maximum="1.0" liveDragging="true"
 					   width="100%"
@@ -761,7 +761,7 @@
 		</s:VGroup>
 	</s:HGroup>
 	
-	<esri:Editor id="editor"
+	<esri:Editor id="editor" width="{grpSketchHeader.width}"
 				 map="{this.map}" featureLayers="{[ sketchFeatureLayer ]}" geometryService="{geomService}"
 				 toolbarVisible="false">
 		<esri:createOptions>
@@ -769,7 +769,7 @@
 		</esri:createOptions>
 	</esri:Editor>
 	
-	<s:Line width="100%">
+	<s:Line id="lineHSep" width="100%">
 		<s:stroke>
 			<s:SolidColorStroke color="0x999999" weight="1"/>
 		</s:stroke>

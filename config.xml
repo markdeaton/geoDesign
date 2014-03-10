@@ -2,22 +2,22 @@
 <config>
 	<services>
 		<basemaps>
-			<basemap label="Imagery" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"/>
+<!-- 			<basemap label="Imagery" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"/>
 			<basemap label="Topographic" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer"/>
 			<basemap label="Streets" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer"/>
-			<basemap label="Nat'l Geo" url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/>
-<!-- 			<basemap label="Basemap" url="http://maps.esri.com/apl16/rest/services/US48_Background_Basemap/MapServer"/> -->
-
+			<basemap label="Nat'l Geo" url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/> -->
+			<basemap label="Basemap" url="http://maps.esri.com/apl16/rest/services/US48_Background_Basemap_2/MapServer"/>
+			<referenceLayer url="http://maps.esri.com/apl16/rest/services/US48_Reference_Basemap/MapServer"/>
 		</basemaps>
 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS_TIFF/ImageServer"/>
 <!-- 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS/ImageServer"/> -->
 <!-- 		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/GeodesignDemo_UC2013/FeatureServer/0"/> -->
-		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/USFS/FeatureServer/0"/>
-<!-- 		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/Sketch_albers/FeatureServer/0"/> -->
+<!-- 		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/USFS/FeatureServer/0"/> -->
+		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/Sketch_albers/FeatureServer/0"/>
 		<geometrySvc url="http://utility.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer"/>
 	</services>
-	<initialExtent xmin="-14352000" ymin="3796000" xmax="-11222000" ymax="5692000"/>
-<!-- 	<initialExtent xmin="-2934210" ymin="1086597" xmax="-517334" ymax="2894496"/> -->
+<!-- 	<initialExtent xmin="-14352000" ymin="3796000" xmax="-11222000" ymax="5692000"/> -->
+	<initialExtent xmin="-2304679" ymin="1669138" xmax="-2089043" ymax="1895092"/>
 
 	<labels>
 		<analysisPanelTitle>Site Suitability</analysisPanelTitle>

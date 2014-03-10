@@ -742,7 +742,7 @@
 			
 		]]>
 	</fx:Script>
-	<s:HGroup id="grpSketchHeader" verticalAlign="middle"> <s:Label text="{grpSketchHeader.width}"/>
+	<s:HGroup id="grpSketchHeader" verticalAlign="middle">
 		<s:CheckBox id="chkDrawFreehand" label="Draw freehand" click="editor.templatePicker.clearSelection();" selected="true"/>
 <!--		<s:Button id="btnRefreshSketch" label="Refresh Sketch" click="sketchFeatureLayer.refresh();updateDashboardStats(sketchFeatureLayer);"
 				  visible="false" includeInLayout="false"/>-->

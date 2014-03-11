@@ -166,7 +166,12 @@
 						   outFields="[Class, Comments]"
 						   mode="snapshot" useAMF="false"
 						   alpha="0.6">
-		</esri:FeatureLayer>						   
+		</esri:FeatureLayer>
+		<esri:extentChange>
+			<![CDATA[
+				trace('xmin="' + map.extent.xmin + '" ymin="' + map.extent.ymin + '" xmax="' + map.extent.xmax + '" ymax="' + map.extent.ymax + '"');
+			]]>
+		</esri:extentChange>
 	</esri:Map>
 	
 	

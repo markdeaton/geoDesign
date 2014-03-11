@@ -17,7 +17,7 @@
 		<geometrySvc url="http://utility.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer"/>
 	</services>
 <!-- 	<initialExtent xmin="-14352000" ymin="3796000" xmax="-11222000" ymax="5692000"/> -->
-	<initialExtent xmin="-2304679" ymin="1669138" xmax="-2089043" ymax="1895092"/>
+	<initialExtent xmin="-2654057.960000001" ymin="1264665.1526315762" xmax="-1445797.3389473683" ymax="2168482.152631577"/>
 
 	<labels>
 		<analysisPanelTitle>Site Suitability</analysisPanelTitle>

@@ -6,8 +6,8 @@
 			<basemap label="Topographic" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer"/>
 			<basemap label="Streets" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer"/>
 			<basemap label="Nat'l Geo" url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/> -->
-			<basemap label="Basemap" url="http://maps.esri.com/apl16/rest/services/US48_Background_Basemap_2/MapServer"/>
-			<referenceLayer url="http://maps.esri.com/apl16/rest/services/US48_Reference_Basemap/MapServer"/>
+			<basemap label="Basemap" url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Background/MapServer"/>
+			<referenceLayer url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Reference/MapServer"/>
 		</basemaps>
 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS_TIFF/ImageServer"/>
 <!-- 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS/ImageServer"/> -->

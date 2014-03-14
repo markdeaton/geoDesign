@@ -46,7 +46,8 @@
 
 	<!-- Reclass type string should be "range" or "discrete" (as defined in OverlayReclass RECLASS_TYPENAME constants) -->
 	<analysisSettings>
-		<rasterFunctionName>WeightedOverlay_7_1_9_2</rasterFunctionName>
+<!-- 		<rasterFunctionName>WeightedOverlay_7_1_9_2</rasterFunctionName> -->
+		<rasterFunctionName>WeightedOverlay_7_1_9_GYR</rasterFunctionName>
 		<variable title="Critical Habitat" startWeightPct="0" rasterId="7" rasterIdParamName="Raster1" weightParamName="Weight_Raster1" inputRangesParamName="InputRanges_Raster1" outputValuesParamName="OutputValues_Raster1">
 			<reclass type="discrete" value="0" label="Not critical" reclassValue="1"/> 
 			<reclass type="discrete" value="5" label="Threatened" reclassValue="5"/> 

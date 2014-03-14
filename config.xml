@@ -8,6 +8,7 @@
 			<basemap label="Nat'l Geo" url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/> -->
 			<basemap label="Basemap" url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Background/MapServer"/>
 			<referenceLayer url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Reference/MapServer"/>
+<!-- 			<referenceLayer url="http://gabbro:6080/arcgis/rest/services/CONUS_Albers_Reference/MapServer"/> -->
 		</basemaps>
 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS_TIFF/ImageServer"/>
 <!-- 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS/ImageServer"/> -->

@@ -153,7 +153,7 @@
 	
 	<esri:Map id="map" top="5" left="5" right="5" bottom="5" wrapAround180="true">
 		<esri:ArcGISDynamicMapServiceLayer url="{lstBasemaps.selectedItem.@url}" width="100%" height="100%"/>
-		<esri:ArcGISImageServiceLayer id="lyrImgSvc"  
+		<esri:ArcGISImageServiceLayer id="lyrImgSvc" alpha="0.6"
 									  visible="{!chkHideAnalysis.selected &amp;&amp; overlaySettingsPanel.analysisLayerShouldBeVisible}"
 									  url="{xmlConfig.services.suitability.@imgSvcUrl}" 
 									  renderingRule="{overlaySettingsPanel.rasterFunction}"

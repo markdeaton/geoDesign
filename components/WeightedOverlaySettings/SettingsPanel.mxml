@@ -119,9 +119,9 @@
 					</s:stroke>
 					<s:fill>
 						<s:LinearGradient>
-							<s:GradientEntry color="0x009900" ratio="0.0"/>
+							<s:GradientEntry color="0xFF0000" ratio="0.0"/>
 							<s:GradientEntry color="0xFFFF00" ratio="0.5"/>
-							<s:GradientEntry color="0xFF0000" ratio="1.0"/>
+							<s:GradientEntry color="0x009900" ratio="1.0"/>
 						</s:LinearGradient>
 					</s:fill>
 				</s:Rect>

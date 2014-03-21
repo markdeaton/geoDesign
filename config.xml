@@ -31,35 +31,35 @@
 					be returned by the ImageService's computeHistogram function) -->
 			<value0 color="0xcccccc" label="No Data" />
 <!-- 			Low suitability -->
-<!-- 			<value1 color="0xe60000" label="Low-"/> -->
-<!-- 			<value2 color="0xf25500" label="Low"/> -->
-<!-- 			<value3 color="0xfa8e00" label="Low+"/> -->
+			<value1 color="0xe60000" label="Low-"/>
+			<value2 color="0xf25500" label="Low"/>
+			<value3 color="0xfa8e00" label="Low+"/>
 <!-- 			Mid suitability -->
-<!-- 			<value4 color="0xffc300" label="Mid-"/> -->
-<!-- 			<value5 color="0xffff00" label="Mid"/> -->
-<!-- 			<value6 color="0xc5db00" label="Mid+"/> -->
-<!-- 			High suitability -->
-<!-- 			<value7 color="0x8bb500" label="High-"/> -->
-<!-- 			<value8 color="0x569400" label="High"/> -->
-<!-- 			<value9 color="0x267300" label="High+"/> -->
-			<!-- High suitability -->
-			<value1 color="0xe60000" label="High+"/>
-			<value2 color="0xf25500" label="High"/>
-			<value3 color="0xfa8e00" label="High-"/>
-			<!-- Mid suitability -->
-			<value4 color="0xffc300" label="Mid+"/>
+			<value4 color="0xffc300" label="Mid-"/>
 			<value5 color="0xffff00" label="Mid"/>
-			<value6 color="0xc5db00" label="Mid-"/>
-			<!-- Low suitability -->
-			<value7 color="0x8bb500" label="Low+"/>
-			<value8 color="0x569400" label="Low"/>
-			<value9 color="0x267300" label="Low-"/>
+			<value6 color="0xc5db00" label="Mid+"/>
+<!-- 			High suitability -->
+			<value7 color="0x8bb500" label="High-"/>
+			<value8 color="0x569400" label="High"/>
+			<value9 color="0x267300" label="High+"/>
+<!-- 			High suitability -->
+<!-- 			<value1 color="0xe60000" label="High+"/> -->
+<!-- 			<value2 color="0xf25500" label="High"/> -->
+<!-- 			<value3 color="0xfa8e00" label="High-"/> -->
+<!-- 			Mid suitability -->
+<!-- 			<value4 color="0xffc300" label="Mid+"/> -->
+<!-- 			<value5 color="0xffff00" label="Mid"/> -->
+<!-- 			<value6 color="0xc5db00" label="Mid-"/> -->
+<!-- 			Low suitability -->
+<!-- 			<value7 color="0x8bb500" label="Low+"/> -->
+<!-- 			<value8 color="0x569400" label="Low"/> -->
+<!-- 			<value9 color="0x267300" label="Low-"/> -->
 		</graphSuitabilityInfo>
 	</computeHistogramSettings>
 
 	<!-- Reclass type string should be "range" or "discrete" (as defined in OverlayReclass RECLASS_TYPENAME constants) -->
 	<analysisSettings>
-		<rasterFunctionName>WeightedOverlay_7_1_9_GYR</rasterFunctionName>
+		<rasterFunctionName>WeightedOverlay_7_1_9_RYG</rasterFunctionName>
 		<variable title="Critical Habitat" startWeightPct="0" rasterId="7" rasterIdParamName="Raster1" weightParamName="Weight_Raster1" inputRangesParamName="InputRanges_Raster1" outputValuesParamName="OutputValues_Raster1">
 			<reclass type="discrete" value="0" label="Not critical" reclassValue="1"/> 
 			<reclass type="discrete" value="5" label="Threatened" reclassValue="5"/> 

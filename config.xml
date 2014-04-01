@@ -6,8 +6,10 @@
 			<basemap label="Topographic" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer"/>
 			<basemap label="Streets" url="http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer"/>
 			<basemap label="Nat'l Geo" url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/> -->
-			<basemap label="Basemap" url="http://maps.esri.com/apl16/rest/services/US48_Background_Basemap_2/MapServer"/>
-			<referenceLayer url="http://maps.esri.com/apl16/rest/services/US48_Reference_Basemap/MapServer"/>
+<!-- 			<basemap label="Basemap" url="http://maps.esri.com/apl16/rest/services/US48_Background_Basemap_2/MapServer"/>
+			<referenceLayer url="http://maps.esri.com/apl16/rest/services/US48_Reference_Basemap/MapServer"/> -->
+			<basemap label="Basemap" url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Background/MapServer"/>
+			<referenceLayer url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Reference/MapServer"/>
 		</basemaps>
 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS_TIFF/ImageServer"/>
 <!-- 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS/ImageServer"/> -->
@@ -17,7 +19,11 @@
 		<geometrySvc url="http://utility.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer"/>
 	</services>
 <!-- 	<initialExtent xmin="-14352000" ymin="3796000" xmax="-11222000" ymax="5692000"/> -->
-	<initialExtent xmin="-2654057.960000001" ymin="1264665.1526315762" xmax="-1445797.3389473683" ymax="2168482.152631577"/>
+<!-- 	<initialExtent xmin="-2654057.960000001" ymin="1264665.1526315762" xmax="-1445797.3389473683" ymax="2168482.152631577"/>	 -->
+	<initialExtent xmin="-2775954.06169472" ymin="1099651.75187513" xmax="-1074054.3362442" ymax="2482546.48597099"/>
+
+
+
 
 	<labels>
 		<analysisPanelTitle>Site Suitability</analysisPanelTitle>
@@ -31,35 +37,35 @@
 					be returned by the ImageService's computeHistogram function) -->
 			<value0 color="0xcccccc" label="No Data" />
 <!-- 			Low suitability -->
-			<value1 color="0xe60000" label="Low-"/>
+<!-- 			<value1 color="0xe60000" label="Low-"/>
 			<value2 color="0xf25500" label="Low"/>
-			<value3 color="0xfa8e00" label="Low+"/>
+			<value3 color="0xfa8e00" label="Low+"/> -->
 <!-- 			Mid suitability -->
-			<value4 color="0xffc300" label="Mid-"/>
+<!-- 			<value4 color="0xffc300" label="Mid-"/>
 			<value5 color="0xffff00" label="Mid"/>
-			<value6 color="0xc5db00" label="Mid+"/>
+			<value6 color="0xc5db00" label="Mid+"/> -->
 <!-- 			High suitability -->
-			<value7 color="0x8bb500" label="High-"/>
+<!-- 			<value7 color="0x8bb500" label="High-"/>
 			<value8 color="0x569400" label="High"/>
-			<value9 color="0x267300" label="High+"/>
-<!-- 			High suitability -->
-<!-- 			<value1 color="0xe60000" label="High+"/> -->
-<!-- 			<value2 color="0xf25500" label="High"/> -->
-<!-- 			<value3 color="0xfa8e00" label="High-"/> -->
-<!-- 			Mid suitability -->
-<!-- 			<value4 color="0xffc300" label="Mid+"/> -->
-<!-- 			<value5 color="0xffff00" label="Mid"/> -->
-<!-- 			<value6 color="0xc5db00" label="Mid-"/> -->
+			<value9 color="0x267300" label="High+"/> -->
 <!-- 			Low suitability -->
-<!-- 			<value7 color="0x8bb500" label="Low+"/> -->
-<!-- 			<value8 color="0x569400" label="Low"/> -->
-<!-- 			<value9 color="0x267300" label="Low-"/> -->
+			<value9 color="0x267300" label="Low-"/>
+			<value8 color="0x569400" label="Low"/>
+			<value7 color="0x8bb500" label="Low+"/>
+<!-- 			Mid suitability -->
+			<value6 color="0xc5db00" label="Mid-"/>
+			<value5 color="0xffff00" label="Mid"/>
+			<value4 color="0xffc300" label="Mid+"/>
+<!-- 			High suitability -->
+			<value3 color="0xfa8e00" label="High-"/>
+			<value2 color="0xf25500" label="High"/>
+			<value1 color="0xe60000" label="High+"/>
 		</graphSuitabilityInfo>
 	</computeHistogramSettings>
 
 	<!-- Reclass type string should be "range" or "discrete" (as defined in OverlayReclass RECLASS_TYPENAME constants) -->
 	<analysisSettings>
-		<rasterFunctionName>WeightedOverlay_7_1_9_RYG</rasterFunctionName>
+		<rasterFunctionName>WeightedOverlay_7_1_9_GYR</rasterFunctionName>
 		<variable title="Critical Habitat" startWeightPct="0" rasterId="7" rasterIdParamName="Raster1" weightParamName="Weight_Raster1" inputRangesParamName="InputRanges_Raster1" outputValuesParamName="OutputValues_Raster1">
 			<reclass type="discrete" value="0" label="Not critical" reclassValue="1"/> 
 			<reclass type="discrete" value="5" label="Threatened" reclassValue="5"/> 

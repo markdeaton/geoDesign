@@ -8,6 +8,7 @@
 			   xmlns:wols="components.WeightedOverlaySettings.*" 
 			   xmlns:MapLayers="components.MapLayers.*"
 			   creationComplete="application1_creationCompleteHandler(event)"
+			   initialize="application1_initializeHandler(event)"
 			   currentState="analyze" 
 			   xmlns:Sketch="components.Sketch.*" 
 			   xmlns:GIFPlayer="GIFPlayer.*">
@@ -34,6 +35,8 @@
 			import mx.utils.ObjectUtil;
 			
 			[Bindable]
+			private var initialExtent			: Extent;
+			[Bindable]
 			private var basemapUrl				: String;
 			[Bindable]
 			private var geomSvcUrl				: String;
@@ -47,6 +50,11 @@
 			private var xmlConfig				: XML;
 			
 			protected function application1_creationCompleteHandler(event:FlexEvent):void
+			{
+//				htsConfig.send();
+			}
+			
+			protected function application1_initializeHandler(event:FlexEvent):void
 			{
 				htsConfig.send();
 			}
@@ -137,13 +145,13 @@
 			<s:result>
 				<![CDATA[
 				xmlConfig = htsConfig.lastResult as XML;
-				var extent:Extent = new Extent(	htsConfig.lastResult.initialExtent.@xmin.valueOf(),
+  				initialExtent = new Extent(	htsConfig.lastResult.initialExtent.@xmin.valueOf(),
 					htsConfig.lastResult.initialExtent.@ymin.valueOf(),
 					htsConfig.lastResult.initialExtent.@xmax.valueOf(),
-					htsConfig.lastResult.initialExtent.@ymax.valueOf(),
-					map.spatialReference);
-				map.extent = extent;
-				lstBasemaps.selectedIndex = 0;
+					htsConfig.lastResult.initialExtent.@ymax.valueOf() );
+//				map.zoomTo( extent );  
+				
+//				lstBasemaps.selectedIndex = 0;
 				]]>
 			</s:result>
 		</s:HTTPService>
@@ -151,8 +159,8 @@
 		<s:NumberFormatter id="fmtPixelArea" useGrouping="true"/>
 	</fx:Declarations>
 	
-	<esri:Map id="map" top="5" left="5" right="5" bottom="5" wrapAround180="true">
-		<esri:ArcGISDynamicMapServiceLayer url="{lstBasemaps.selectedItem.@url}" width="100%" height="100%"/>
+	<esri:Map id="map" top="5" left="5" right="5" bottom="5" wrapAround180="true" extent="{initialExtent}">
+		<esri:ArcGISTiledMapServiceLayer url="{xmlConfig.services.basemaps.basemap.@url}" width="100%" height="100%"/>
 		<esri:ArcGISImageServiceLayer id="lyrImgSvc" alpha="0.6"
 									  visible="{!chkHideAnalysis.selected &amp;&amp; overlaySettingsPanel.analysisLayerShouldBeVisible}"
 									  url="{xmlConfig.services.suitability.@imgSvcUrl}" 
@@ -167,7 +175,7 @@
 						   mode="snapshot" useAMF="false"
 						   alpha="0.6">
 		</esri:FeatureLayer>
-		<esri:extentChange>
+		<esri:extentChange> 
 			<![CDATA[
 				trace('xmin="' + map.extent.xmin + '" ymin="' + map.extent.ymin + '" xmax="' + map.extent.xmax + '" ymax="' + map.extent.ymax + '"');
 			]]>
@@ -194,15 +202,15 @@
 			</s:change>
 		</s:ButtonBar>
 		
-		<s:DropDownList id="lstBasemaps" prompt="Basemap" visible="false"
+<!--		<s:DropDownList id="lstBasemaps" prompt="Basemap" visible="false"
 						dataProvider="{new XMLListCollection(htsConfig.lastResult.services.basemaps.basemap)}" 
-						labelField="@label"/>
-		
-		<s:Spacer width="5"/>
-		<esri:Geocoder map="{map}" width="{bbPanels.width}" prompt="Find a location..."/>
+						labelField="@label"/>-->
 		<s:CheckBox id="chkHideAnalysis" color="Black" fontWeight="bold"
 					label="Hide Analysis" 
 					selected="false"/>
+		
+		<s:Spacer width="5"/>
+		<esri:Geocoder map="{map}" width="{bbPanels.width}" prompt="Find a location..."/>
 	</s:TileGroup>
 	
 </s:Application>

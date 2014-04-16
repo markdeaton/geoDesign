@@ -143,6 +143,7 @@
 					htsConfig.lastResult.initialExtent.@ymax.valueOf(),
 					map.spatialReference);
 				map.extent = extent;
+				lstBasemaps.selectedIndex = 0;
 				]]>
 			</s:result>
 		</s:HTTPService>
@@ -151,20 +152,26 @@
 	</fx:Declarations>
 	
 	<esri:Map id="map" top="5" left="5" right="5" bottom="5" wrapAround180="true">
-		<esri:ArcGISTiledMapServiceLayer url="{lstBasemaps.selectedItem.@url}" width="100%" height="100%"/>
-		<esri:ArcGISImageServiceLayer id="lyrImgSvc"  
+		<esri:ArcGISDynamicMapServiceLayer url="{lstBasemaps.selectedItem.@url}" width="100%" height="100%"/>
+		<esri:ArcGISImageServiceLayer id="lyrImgSvc"  alpha="0.70"
 									  visible="{!chkHideAnalysis.selected &amp;&amp; overlaySettingsPanel.analysisLayerShouldBeVisible}"
 									  url="{xmlConfig.services.suitability.@imgSvcUrl}" 
 									  renderingRule="{overlaySettingsPanel.rasterFunction}"
 									  interpolation="RSP_NearestNeighbor" 
 									  updateStart="overlayLayerLoading = true;" updateEnd="overlayLayerLoading = false;"
 									  />
+		<esri:ArcGISDynamicMapServiceLayer url="{xmlConfig.services.basemaps.referenceLayer.@url}" width="100%" height="100%"/>
 		<esri:FeatureLayer id="lyrSketch"
 						   url="{xmlConfig.services.sketchFeatures.@featSvcUrl}"
 						   outFields="[Class, Comments]"
 						   mode="snapshot" useAMF="false"
 						   alpha="0.6">
-		</esri:FeatureLayer>						   
+		</esri:FeatureLayer>
+		<esri:extentChange>
+			<![CDATA[
+				trace('xmin="' + map.extent.xmin + '" ymin="' + map.extent.ymin + '" xmax="' + map.extent.xmax + '" ymax="' + map.extent.ymax + '"');
+			]]>
+		</esri:extentChange>
 	</esri:Map>
 	
 	
@@ -187,7 +194,7 @@
 			</s:change>
 		</s:ButtonBar>
 		
-		<s:DropDownList id="lstBasemaps" prompt="Basemap"
+		<s:DropDownList id="lstBasemaps" prompt="Basemap" visible="false"
 						dataProvider="{new XMLListCollection(htsConfig.lastResult.services.basemaps.basemap)}" 
 						labelField="@label"/>
 		

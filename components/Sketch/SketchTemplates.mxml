@@ -822,15 +822,15 @@
 			</mx:ColumnChart>
 		</s:VGroup>
 		
-		<s:Line height="100%" visible="{currentState!='overview'}" includeInLayout="{currentState!='overview'}">
+<!--		<s:Line height="100%" visible="{currentState=='detail'}" includeInLayout="{currentState=='detail'}">
 			<s:stroke>
 				<s:SolidColorStroke color="0x999999" weight="1"/>
 			</s:stroke>
 		</s:Line>
 		
-		<s:Group visible="false" includeInLayout="false"
-				 visible.detailWithPopInfo="true" includeInLayout.detailWithPopInfo="true"
-				 visible.detail="true" includeInLayout.detail="true">
+-->		<s:Group visible="false" includeInLayout="false"
+				 visible.detailWithPopInfo="false" includeInLayout.detailWithPopInfo="false"
+				 visible.detail="false" includeInLayout.detail="false">
 				
 				<s:VGroup id="grpSketchClassStats" gap="8" horizontalAlign="center" verticalAlign="top">
 					
@@ -886,7 +886,7 @@
 		</s:Group>
 		
 		
-		<s:Line height="100%" visible="{currentState!='overview'}" includeInLayout="{currentState!='overview'}">
+		<s:Line height="100%" visible="{currentState=='detailWithPopInfo'}" includeInLayout="{currentState=='detailWithPopInfo'}">
 			<s:stroke>
 				<s:SolidColorStroke color="0x999999" weight="1"/>
 			</s:stroke>

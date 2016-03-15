@@ -43,7 +43,8 @@
 					   resultFormat="text"/>
 		
 		<esri:QueryTask id="qtCensusTracts" 
-						url="http://tigerweb.geo.census.gov/arcgis/rest/services/Census2010/Tracts_Blocks/MapServer/0"
+						url="https://tigerweb.geo.census.gov/arcgis/rest/services/Census2010/Tracts_Blocks/MapServer/0"
+						proxyURL="../jsproxy_110_net/proxy.ashx"
 						method="POST" useAMF="false"					
 						executeComplete="onGetCensusTractsComplete(event)"
 						fault="onGetCensusTractsFault(event)"
@@ -161,6 +162,8 @@
 			private var tractMortgageData		: Array;
 			[Bindable]
 			private var nTotalSketchArea		: Number;
+			private var totalPopulation			: int;
+			
 			/** Multiple tract queries are made for a sketch; keep track of when they've all completed **/
 			private var m_outstandingTractQueries:int = 0;
 			private var m_allTractQueriesInvoked:Boolean = true;
@@ -568,6 +571,7 @@
 				var currentQueryCounty:String;
 				var currentQueryTracts:Array = [];
 				
+				totalPopulation = 0;
 				m_outstandingTractQueries = 0;
 				m_allTractQueriesInvoked = false;
 				tractData = {};
@@ -578,6 +582,8 @@
 					currentQueryState = oCurrentResult["STATE"]; currentQueryCounty = oCurrentResult["COUNTY"];
 					currentQueryTracts.push(oCurrentResult["TRACT"]);
 
+					totalPopulation += oCurrentResult["POP100"];
+					
 					// States: first row; last row; new tract; upcoming new state or new county
 					var bIsFirstRow:Boolean = (i == 0);
 					var bIsLastRow:Boolean = (i == aryResults.length - 1);
@@ -879,7 +885,7 @@
 					<![CDATA[
 						currentState = "detailWithPopInfo";
 						lblTotalHomes.text = tractData["B25116_001E"]["count"];
-					
+						lblTotalPopulation.text = totalPopulation.toString();
 					]]>
 				</s:click>
 			</s:Button>
@@ -901,6 +907,10 @@
 			<s:Spacer height="30"/>
 			
 			<mx:Grid horizontalAlign="center">
+				<mx:GridRow>
+					<mx:GridItem><s:Label text="Total population:"/></mx:GridItem>
+					<mx:GridItem horizontalAlign="right"><s:Label id="lblTotalPopulation" styleName="tractStatNumbers"/></mx:GridItem>
+				</mx:GridRow>
 				<mx:GridRow>
 					<mx:GridItem><s:Label text="Total households:"/></mx:GridItem>
 					<mx:GridItem horizontalAlign="right"><s:Label id="lblTotalHomes" styleName="tractStatNumbers"/></mx:GridItem>

@@ -44,7 +44,7 @@
 		
 		<esri:QueryTask id="qtCensusTracts" 
 						url="https://tigerweb.geo.census.gov/arcgis/rest/services/Census2010/Tracts_Blocks/MapServer/0"
-						proxyURL="../jsproxy_110_net/proxy.ashx"
+						proxyURL="/proxy/DotNet/proxy.ashx"
 						method="POST" useAMF="false"					
 						executeComplete="onGetCensusTractsComplete(event)"
 						fault="onGetCensusTractsFault(event)"
@@ -595,7 +595,7 @@
 					
 					// If (upcoming new state or new county) or (last row), build url, execute the query, clear vars for next time
 					if (bUpcomingNewStateOrCounty || bIsLastRow) {
-						var sUrl:String = "proxy.ashx?http://api.census.gov/data/2011/acs5"
+						var sUrl:String = "/proxy/DotNet/proxy.ashx?https://api.census.gov/data/2014/acs5"
 							+ "?"
 							+ "key=33e14683d2646d649c843c815335a9a70c2f2063"
 							+ "&"
@@ -725,6 +725,7 @@
 					dispatchEvent(new Event("tractMortgageDataChanged"));
 					
 					// Set housing figure labels and show the tract data panel
+					lblTotalPopulation.text = totalPopulation.toString();
 					lblTotalHomes.text = tractData["B25116_001E"]["count"];
 					lblNonEnglish.text = tractData["B16002_004E"]["count"]
 						+ tractData["B16002_007E"]["count"]

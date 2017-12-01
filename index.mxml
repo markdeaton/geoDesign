@@ -19,6 +19,7 @@
 	</s:states>
 	<fx:Script>
 		<![CDATA[
+			import com.esri.ags.SpatialReference;
 			import com.esri.ags.geometry.Extent;
 			import com.esri.ags.layers.supportClasses.RasterFunction;
 			import com.esri.ags.utils.JSONUtil;
@@ -34,8 +35,8 @@
 			import mx.managers.PopUpManager;
 			import mx.utils.ObjectUtil;
 			
-			[Bindable]
-			private var initialExtent			: Extent;
+/* 			[Bindable]
+			private var initialExtent			: Extent; */
 			[Bindable]
 			private var basemapUrl				: String;
 			[Bindable]
@@ -145,10 +146,11 @@
 			<s:result>
 				<![CDATA[
 				xmlConfig = htsConfig.lastResult as XML;
-  				initialExtent = new Extent(	htsConfig.lastResult.initialExtent.@xmin.valueOf(),
+/*   				initialExtent = new Extent(	htsConfig.lastResult.initialExtent.@xmin.valueOf(),
 					htsConfig.lastResult.initialExtent.@ymin.valueOf(),
 					htsConfig.lastResult.initialExtent.@xmax.valueOf(),
 					htsConfig.lastResult.initialExtent.@ymax.valueOf() );
+				initialExtent.spatialReference = new SpatialReference(htsConfig.lastResult.initialExtent.@srId); */
 //				map.zoomTo( extent );  
 				
 //				lstBasemaps.selectedIndex = 0;
@@ -157,10 +159,15 @@
 		</s:HTTPService>
 
 		<s:NumberFormatter id="fmtPixelArea" useGrouping="true"/>
+		
+		<esri:Extent id="initialExtent"
+					 xmin="-2523086.10347267" ymin="1232964.03641288" xmax="-1432373.57960128" ymax="2083104.80957963">
+			<esri:SpatialReference wkt='PROJCS["NAD_1983_Albers",GEOGCS["GCS_North_American_1983",DATUM["D_North_American_1983",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Albers"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-96.0],PARAMETER["Standard_Parallel_1",29.5],PARAMETER["Standard_Parallel_2",45.5],PARAMETER["Latitude_Of_Origin",23.0],UNIT["Meter",1.0]]'/>
+		</esri:Extent>
 	</fx:Declarations>
 	
-	<esri:Map id="map" top="5" left="5" right="5" bottom="5" wrapAround180="true" extent="{initialExtent}">
-		<esri:ArcGISTiledMapServiceLayer url="{xmlConfig.services.basemaps.basemap.@url}" width="100%" height="100%"/>
+	<esri:Map id="map" top="5" left="5" right="5" bottom="5" wrapAround180="true" extent="{initialExtent}">		
+		<esri:ArcGISDynamicMapServiceLayer url="{xmlConfig.services.basemaps.basemap.@url}" width="100%" height="100%"/>
 		<esri:ArcGISImageServiceLayer id="lyrImgSvc" alpha="0.6"
 									  visible="{!chkHideAnalysis.selected &amp;&amp; overlaySettingsPanel.analysisLayerShouldBeVisible}"
 									  url="{xmlConfig.services.suitability.@imgSvcUrl}" 

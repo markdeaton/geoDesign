@@ -8,19 +8,20 @@
 			<basemap label="Nat'l Geo" url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/> -->
 <!-- 			<basemap label="Basemap" url="http://maps.esri.com/apl16/rest/services/US48_Background_Basemap_2/MapServer"/>
 			<referenceLayer url="http://maps.esri.com/apl16/rest/services/US48_Reference_Basemap/MapServer"/> -->
-			<basemap label="Basemap" url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Background/MapServer"/>
-			<referenceLayer url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Reference/MapServer"/>
+<!-- 			<basemap label="Basemap" url="http://maps.esri.com/apl4/rest/services/CONUS_Albers_Background/MapServer"/> -->
+			<basemap label="Basemap" url="https://server.arcgisonline.com/arcgis/rest/services/World_Shaded_Relief/MapServer"/>
+			<referenceLayer url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer"/>
 		</basemaps>
-		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS_TIFF/ImageServer"/>
-<!-- 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS/ImageServer"/> -->
+<!-- 		<suitability imgSvcUrl="http://maps.esri.com/apl15/rest/services/WeightedOverlay/WeightedOverlayUSFS_TIFF/ImageServer"/> -->
+ 		<suitability imgSvcUrl="https://maps.esri.com/apl1/rest/services/WeightedOverlay_GeoDesignApp/ImageServer"/>
 <!-- 		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/GeodesignDemo_UC2013/FeatureServer/0"/> -->
 <!-- 		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/USFS/FeatureServer/0"/> -->
-		<sketchFeatures featSvcUrl="http://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/Sketch_albers/FeatureServer/0"/>
-		<geometrySvc url="http://utility.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer"/>
+		<sketchFeatures featSvcUrl="https://services.arcgis.com/W6FrZiZ4flx7mLJe/arcgis/rest/services/Sketch_albers/FeatureServer/0"/>
+		<geometrySvc url="https://utility.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer"/>
 	</services>
 <!-- 	<initialExtent xmin="-14352000" ymin="3796000" xmax="-11222000" ymax="5692000"/> -->
 <!-- 	<initialExtent xmin="-2654057.960000001" ymin="1264665.1526315762" xmax="-1445797.3389473683" ymax="2168482.152631577"/>	 -->
-	<initialExtent xmin="-2775954.06169472" ymin="1099651.75187513" xmax="-1074054.3362442" ymax="2482546.48597099"/>
+	<initialExtent srId="102003" xmin="-13824198.104296" ymin="3824332.86593453" xmax="-12395445.2467902" ymax="4908544.36450107"/>
 
 
 
@@ -31,7 +32,8 @@
 	</labels>
 	
 	<computeHistogramSettings>
-		<rasterFunctionName>WeightedOverlay_7_0_9_histogram_10_2_1</rasterFunctionName>
+		<!--rasterFunctionName>WeightedOverlay_7_0_9_histogram_10_2_1</rasterFunctionName-->
+		<rasterFunctionName>WeightedOverlay_7_0_9_histogram</rasterFunctionName>
 		<graphSuitabilityInfo>
 			<!-- These must be in order of low to high suitability (i.e. the same order the values will
 					be returned by the ImageService's computeHistogram function) -->
@@ -65,7 +67,8 @@
 
 	<!-- Reclass type string should be "range" or "discrete" (as defined in OverlayReclass RECLASS_TYPENAME constants) -->
 	<analysisSettings>
-		<rasterFunctionName>WeightedOverlay_7_1_9_GYR_10_2_1</rasterFunctionName>
+		<!--rasterFunctionName>WeightedOverlay_7_1_9_GYR_10_2_1</rasterFunctionName-->
+		<rasterFunctionName>WeightedOverlay_7_1_9_GYR</rasterFunctionName>
 		<variable title="Critical Habitat" startWeightPct="0" rasterId="7" rasterIdParamName="Raster1" weightParamName="Weight_Raster1" inputRangesParamName="InputRanges_Raster1" outputValuesParamName="OutputValues_Raster1">
 			<reclass type="discrete" value="0" label="Not critical" reclassValue="1"/> 
 			<reclass type="discrete" value="5" label="Threatened" reclassValue="5"/> 
